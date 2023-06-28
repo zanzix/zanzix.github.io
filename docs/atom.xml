@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>Some personal notes turned into a blog</title>
+    <link href="https://zanzix.github.io/atom.xml" rel="self" type="application/rss+xml" />
+  <updated>2023-06-28T16:26:01Z</updated>
+  <author>
+      <name>Zanzi</name>
+  </author>
+  <id>https://zanzix.github.io/</id>
+
+  <entry>
+      <title>Sample Post</title>
+      <link href="https://zanzix.github.ioposts/sample-post.html"/>
+      <id>https://zanzix.github.ioposts/sample-post.html</id>
+      <updated>2019-01-01T00:00:00Z</updated>
+      <category term="slick"/>
+      <category term="site"/>
+      <summary>My first blog post using slick</summary>
+      <content type="html"><![CDATA[<p>Welcome to your first blog post!</p>]]></content>
+  </entry>
+</feed>
