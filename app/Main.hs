@@ -29,11 +29,11 @@ import Slick (compileTemplate', convert, markdownToHTML, substitute)
 
 siteMeta :: SiteMeta
 siteMeta =
-    SiteMeta { siteAuthor = "Me"
-             , baseUrl = "https://example.com"
-             , siteTitle = "My Slick Site"
-             , twitterHandle = Just "myslickhandle"
-             , githubUser = Just "myslickgithubuser"
+    SiteMeta { siteAuthor = "Zanzi"
+             , baseUrl = "https://zanzix.github.io"
+             , siteTitle = "Some personal notes turned into a blog"
+             , twitterHandle = Just "tangled_zans"
+             , githubUser = Just "zanzix"
              }
 
 outputFolder :: FilePath

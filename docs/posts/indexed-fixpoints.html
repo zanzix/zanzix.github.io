@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Some personal notes turned into a blog">
+    <meta name="author" content="Zanzi">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@tangled_zans">
+<meta name="twitter:creator" content="@tangled_zans">
+<meta name="twitter:title" content="Fixpoints all the way up">
+    <meta name="twitter:description" content="Lets start the blog">
+    <meta name="twitter:image" content="https://zanzix.github.io/images/code.jpg">
+    <title>Fixpoints all the way up</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a id="beacon" href="/">
+                <div id="home-text"> HOME </div>
+            </a>
+        </nav>
+    
+        <div class="right-sidebar">
+            <a class="ext-link" href="https://github.com/zanzix">
+            <img src="/images/github-logo.png" alt="Github Profile"/>
+        </a>
+
+            <a class="ext-link" href="https://twitter.com/tangled_zans">
+            <img src="/images/twitter-logo.png" alt="Twitter Profile"/>
+        </a>
+    <div id="theme-button">DAY</div>
+        </div>
+    </header>
+
+<div id="page">
+    <div class="wrapper">
+        <div class="masthead">
+            <span class="title">
+                Fixpoints all the way up
+            </span>
+            <br>
+
+            <img class="post-image" src="/images/code.jpg">
+            <br>
+            <span class="byline">by Zanzi</span>
+            <br>
+            <span class="date">Aug 10, 2023</span>
+            <br>
+            <div class="metadata">
+            </div>
+            <div class="tags">
+              <span class="tag functor">functor</span>
+              <span class="tag fixpoint">fixpoint</span>
+              <span class="tag operad">operad</span>
+            </div>
+        </div>
+    </div>
+    <article class="post">
+        <p>In the previous blog posts, we've looked at free operads for
+well-scoped domain specific languages. A natural question to ask, is
+what would it mean to have a well-typed language?</p>
+<p>TODO: Start with Type -&gt; Type instead of Ty-&gt;Type and show that
+we can extract the recursive component just as well</p>
+<p>We will look at it in this blog post.</p>
+<p>Let's say we have a simple language, with Booleans and Arithmetic</p>
+<p>First we define our types</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Ty</span> <span class="fu">=</span> <span class="dt">BOOL</span> <span class="fu">|</span> <span class="dt">NAT</span></span></code></pre></div>
+<p>Then we define our data type, indexed by the types</p>
+<pre><code>data BoolArith : Ty -&gt; Type 
+
+V1 : interpTy type -&gt; BoolArith1 type
+
+AddNat : BoolArith1 NAT -&gt; BoolArith1 NAT -&gt; BoolArith1 NAT
+
+Conj : BoolArith1 BOOL -&gt; BoolArith1 BOOL -&gt; BoolArith1 BOOL
+</code></pre>
+<p>We could write a custom evaluator for our well-typed DSL</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalBA1</span> <span class="ot">:</span> <span class="dt">BoolArith1</span> t <span class="ot">-&gt;</span> interpTy t</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>evalBA1 (<span class="dt">V1</span> t) <span class="fu">=</span> t</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>evalBA1 (<span class="dt">AddNat</span> e1 e2) <span class="fu">=</span> (evalBA1 e1) <span class="fu">+</span> (evalBA1 e2)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>evalBA1 (<span class="dt">Conj</span> e1 e2) <span class="fu">=</span> (evalBA1 e1) <span class="fu">&amp;&amp;</span> (evalBA1 e2)</span></code></pre></div>
+<p>But instead we'd like to use our general machinery</p>
+<p>So as always, we start by extracting the recursive component</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">BoolArithF</span> <span class="ot">:</span> (<span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (<span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="kw">where</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="dt">VF</span> <span class="ot">:</span> interpTy type <span class="ot">-&gt;</span> <span class="dt">BoolArithF</span> r type</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="dt">AddF</span> <span class="ot">:</span> r <span class="dt">NAT</span> <span class="ot">-&gt;</span> r <span class="dt">NAT</span> <span class="ot">-&gt;</span> <span class="dt">BoolArithF</span> r <span class="dt">NAT</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="dt">ConjF</span> <span class="ot">:</span> r <span class="dt">BOOL</span> <span class="ot">-&gt;</span> r <span class="dt">BOOL</span> <span class="ot">-&gt;</span> <span class="dt">BoolArithF</span> r <span class="dt">BOOL</span></span></code></pre></div>
+<p>We can see that (Ty -&gt; Type) is an indexed data type, so
+BoolArithF is an endofunctor over indexed types</p>
+<p>BoolArithF : Functor (Ty -&gt; Type)</p>
+<p>So to tie the recursive knot, we need a fixpoint over an indexed
+endofunctor</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Mu</span> <span class="ot">:</span> ((k <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (k <span class="ot">-&gt;</span> <span class="dt">Type</span>)) <span class="ot">-&gt;</span> k <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="dt">In</span> <span class="ot">:</span> f (<span class="dt">Mu</span> f) a <span class="ot">-&gt;</span> <span class="dt">Mu</span> f a</span></code></pre></div>
+<p>So now we recover our previous data-type</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">BoolArith</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">BoolArith</span> <span class="fu">=</span> (<span class="dt">Mu</span> <span class="dt">BoolArithF</span>)</span></code></pre></div>
+<p>If we want to evaluate our typed expressions, we can do it just as
+before.</p>
+<pre><code>example of eval</code></pre>
+<p>This is neat, but as in chapter 1, this only gives us closed
+expressions.</p>
+<p>But what if we want our expression language to have variables? ref:
+<a href="https://tyde.systems/post/2019-12-04-razor/"
+class="uri">https://tyde.systems/post/2019-12-04-razor/</a></p>
+<p>As we've seen before, to add variables we need to go from Mu to Free,
+and to make the variables well-scoped, we need to go from Free to
+Operad.</p>
+<p>Let's do that straight away.</p>
+<p>However, what we notice is that while previously our type was</p>
+<p>Operad : (Nat -&gt; Type -&gt; Type)</p>
+<p>this is no longer sufficient for our purposes. Since we have more
+than one type, we need a more expressive scope than Fin</p>
+<p>So what we can notice is that Nat is isomorphic to a list over a
+one-element set Nat == List Unit</p>
+<p>So if we want to go from an untyped language to a typed one, we
+generalise our scope from Nat to List Matching the intuition that an
+untyped language is the same as a language with a single type. Or more
+accurately, a well-scoped language is a typed language with a single
+type.</p>
+<p>So generalising from Nat to List, our constructor for well-typed
+expressions would look like this</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">RazorST</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>	<span class="dt">Let</span> <span class="ot">:</span> <span class="dt">RazorST</span> ctxt a <span class="ot">-&gt;</span> <span class="dt">RazorST</span> (a<span class="ot">::</span>ctxt) b <span class="ot">-&gt;</span> <span class="dt">RazorST</span> ctxt b</span></code></pre></div>
+<p>extracting the recursive component</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">RazorF</span> <span class="ot">:</span> (<span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>	<span class="dt">Let</span> <span class="ot">:</span> f ctxt a <span class="ot">-&gt;</span> f (a<span class="ot">::</span>ctxt) b <span class="ot">-&gt;</span> <span class="dt">RazorST</span> ctxt b</span></code></pre></div>
+<p>A multi-object operad is often called a coloured operad, a
+multi-sorted algebraic theory. They're also often called a
+multi-category, but I would make a distinction that a coloured operad is
+an operad over a finite number of types. A full-fledged multicategory,
+is an operad over an inductively defined set of types.</p>
+<p>But we will get to that later.</p>
+
+        <br>
+        <br>
+
+        <!--Share buttons-->
+        <div class="social-buttons">
+            <a href="https://twitter.com/share" class="twitter-share-button"
+                                                data-url="https://zanzix.github.io" data-text="Check out: Fixpoints all the way up - " data-via="tangled_zans">Tweet</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <a href="https://twitter.com/tangled_zans" class="twitter-follow-button" data-show-count="false" data-dnt="true">Follow @tangled_zans</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
+        </div>
+</article>
+
+</div>
+
+<footer>
+    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+</footer>
+
+<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<script src="/js/main.js"></script>
+</body>
+</html>
