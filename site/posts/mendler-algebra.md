@@ -102,5 +102,5 @@ TODO: Will this work with last post's notion of operad (Type -> Type) -> (Nat ->
 LetF : f (Operad f (S n) a) -> Operad f n a
 LetF : Coyoneda f (Operad f (S n) a) -> Operad f n a 
 
-LetBind : f a -> Operad f (S n) a -> Operad f n a)
+LetBind : f a -> Operad f (S n) a -> Operad f n a
 
