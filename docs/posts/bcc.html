@@ -255,21 +255,21 @@ this entirely generically using recursion schemes.</p>
 <p>As an example, let's create a record that packages up our earlier
 definition of the category of Idris functions.</p>
 <div class="sourceCode" id="cb12"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>  <span class="dt">IdrCat</span> <span class="ot">:</span> <span class="dt">Category</span> <span class="dt">Idr</span> </span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">IdrCat</span> <span class="fu">=</span> <span class="dt">MkCat</span> </span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    id </span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    (<span class="fu">.</span>) </span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    (<span class="fu">\</span>f, g, c <span class="ot">=&gt;</span> (f c, g c)) </span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    fst </span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    snd </span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    (<span class="fu">\</span>f, g, c <span class="ot">=&gt;</span> <span class="kw">case</span> c <span class="kw">of</span> </span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">Left</span> l <span class="ot">=&gt;</span> f l </span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">Right</span> r <span class="ot">=&gt;</span> g r) </span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Left</span> </span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Right</span> </span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    (uncurry apply) </span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    curry </span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    uncurry</span></code></pre></div>
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="dt">IdrCat</span> <span class="ot">:</span> <span class="dt">Category</span> <span class="dt">Idr</span> </span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="dt">IdrCat</span> <span class="fu">=</span> <span class="dt">MkCat</span> </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  id </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  (<span class="fu">.</span>) </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  (<span class="fu">\</span>f, g, c <span class="ot">=&gt;</span> (f c, g c)) </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  fst </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  snd </span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  (<span class="fu">\</span>f, g, c <span class="ot">=&gt;</span> <span class="kw">case</span> c <span class="kw">of</span> </span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Left</span> l <span class="ot">=&gt;</span> f l </span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Right</span> r <span class="ot">=&gt;</span> g r) </span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Left</span> </span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Right</span> </span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  (uncurry apply) </span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  curry </span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  uncurry</span></code></pre></div>
 <p>We could also instantiate our record with a few choices of
 categories, such as</p>
 <div class="sourceCode" id="cb13"><pre

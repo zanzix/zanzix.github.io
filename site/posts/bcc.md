@@ -190,21 +190,21 @@ Our new evaluator simply matches each construct with the corresponding record. W
 As an example, let's create a record that packages up our earlier definition of the category of Idris functions.
 
 ```idr
-  IdrCat : Category Idr 
-  IdrCat = MkCat 
-    id 
-    (.) 
-    (\f, g, c => (f c, g c)) 
-    fst 
-    snd 
-    (\f, g, c => case c of 
-      Left l => f l 
-      Right r => g r) 
-    Left 
-    Right 
-    (uncurry apply) 
-    curry 
-    uncurry
+IdrCat : Category Idr 
+IdrCat = MkCat 
+  id 
+  (.) 
+  (\f, g, c => (f c, g c)) 
+  fst 
+  snd 
+  (\f, g, c => case c of 
+    Left l => f l 
+    Right r => g r) 
+  Left 
+  Right 
+  (uncurry apply) 
+  curry 
+  uncurry
 ```
 
 We could also instantiate our record with a few choices of categories, such as 
