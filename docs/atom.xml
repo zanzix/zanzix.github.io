@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Some personal notes turned into a blog</title>
     <link href="https://zanzix.github.io/atom.xml" rel="self" type="application/rss+xml" />
-  <updated>2023-08-22T13:31:24Z</updated>
+  <updated>2023-08-25T14:20:09Z</updated>
   <author>
       <name>Zanzi</name>
   </author>
@@ -39,7 +39,7 @@ Using tools from recursion schemes, this will give us generic evaluators
 for a very wide range of structures.</p>
 <p>On the language side, we will start with combinators and build up to
 simply typed, polymorphic, and dependently-typed languages. At each step
-we will implement an interpreter between the language syntax and it's
+we will implement an interpreter between the language syntax and its
 categorical semantics.</p>
 <p>We will use Idris2 as our language, but write our code in a style
 accessible to Haskell programmers. (Most of the code in the first part
@@ -54,16 +54,18 @@ next blog post.</p>
 <p>These first two blog posts are meant as a high level introduction to
 the basic tools and methodology that we'll be using through the series,
 and we will revisit these ideas step-by-step in subsequent posts.</p>
-<p>We'll start with a representation that's familiar to Haskell
-programmers - a free category over functions.</p>
+<p>We'll start with a <a
+href="https://hackage.haskell.org/package/free-category-0.0.1.0/docs/Control-Category-Free.html">typical
+representation of free categories in Haskell</a> - a free category over
+functions.</p>
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode idr"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Free</span> <span class="ot">:</span> (g <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Id</span> <span class="ot">:</span> <span class="dt">Free</span> g a a </span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Comp</span> <span class="ot">:</span> g b c <span class="ot">-&gt;</span> <span class="dt">Free</span> g a b <span class="ot">-&gt;</span> <span class="dt">Free</span> g a c </span></code></pre></div>
-<p>The first parameter 'g' corresponds to some type of Idris functions
+<p>The first parameter 'g' corresponds to some type of Idris functions.
 'a' and 'b' then correspond to the source and target types of the
-function, Id is the identity function, and Comp corresponds to embeding
-a function into a formal composite of functions.</p>
+function, Id is the identity function, and Comp is a formal composite of
+functions.</p>
 <p>In our case we will use the set of Idris functions</p>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode idr"><code class="sourceCode idris"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Idr</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
@@ -86,8 +88,8 @@ becomes more informative</p>
 class="sourceCode idr"><code class="sourceCode idris"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Free</span> <span class="ot">:</span> {obj <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">Graph</span> obj <span class="ot">-&gt;</span> <span class="dt">Graph</span> obj <span class="kw">where</span> </span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Id</span> <span class="ot">:</span> {a <span class="ot">:</span> obj} <span class="ot">-&gt;</span> <span class="dt">Free</span> g a a </span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Comp</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> obj} <span class="ot">-&gt;</span> g b c <span class="ot">-&gt;</span> <span class="dt">Free</span> g a b <span class="ot">-&gt;</span> <span class="dt">Free</span> g a c </span></code></pre></div>
-<p>A free category is nothing other than a path constructed from
-composing individual edges of a graph.</p>
+<p>A term of a free category is nothing other than a path constructed
+from composing individual edges of a graph.</p>
 <p>You might notice the correspondence between this type, and that of
 Lists</p>
 <div class="sourceCode" id="cb6"><pre
@@ -95,15 +97,15 @@ class="sourceCode idr"><code class="sourceCode idris"><span id="cb6-1"><a href="
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Nil</span> <span class="ot">:</span> <span class="dt">List</span> a</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">(::)</span> <span class="ot">:</span> a <span class="ot">-&gt;</span> <span class="dt">List</span> a <span class="ot">-&gt;</span> <span class="dt">List</span> a  </span></code></pre></div>
 <p>Which motivates the idea that a category is a typed monoid.</p>
-<p>The evaluator for a free category is very similar to an evaluator for
-a list, except that we replace each edge with a function rather than an
+<p>The evaluator for a free category is very similar to a fold for a
+list, except that we replace each edge with a function rather than an
 element.</p>
 <div class="sourceCode" id="cb7"><pre
 class="sourceCode idr"><code class="sourceCode idris"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">eval</span> <span class="ot">:</span> <span class="dt">Free</span> <span class="dt">Idr</span> a b <span class="ot">-&gt;</span> <span class="dt">Idr</span> a b </span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">Id</span> <span class="fu">=</span> id </span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Comp</span> f g) <span class="fu">=</span> f <span class="fu">.</span> (eval g)</span></code></pre></div>
-<h3 id="the-free-bicartesian-closed-category-over-typeds">The Free
-Bicartesian Closed Category over Typeds</h3>
+<h3 id="the-free-bicartesian-closed-category-over-types">The Free
+Bicartesian Closed Category over Types</h3>
 <p>We will now go from a free category to a free category with products,
 coproducts, and exponentials. For readers new to category theory, we
 will go through each of these properties in more granular detail in
@@ -112,7 +114,7 @@ go.</p>
 <p>We can then define a free bicartesian category over types as</p>
 <div class="sourceCode" id="cb8"><pre
 class="sourceCode idr"><code class="sourceCode idris"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">FreeBCC</span> <span class="ot">:</span> <span class="dt">Graph</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Graph</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Embedding a primitive is now a separate operations from &#39;Comp&#39; </span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Embedding a primitive is now a separate operation from &#39;Comp&#39; </span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Prim</span> <span class="ot">:</span> k a b <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k a b</span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Identity arrow: a → a</span></span>
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Id</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> p a a </span>
@@ -122,9 +124,9 @@ class="sourceCode idr"><code class="sourceCode idris"><span id="cb8-1"><a href="
 <span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ProdI</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k a b <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k a c </span>
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k a (b, c) </span>
 <span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- First projection: (a * b) → a</span></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Fst</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k (<span class="dt">Pair</span> a b) a</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Fst</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k (a, b) a</span>
 <span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Second projection: (a * b) → b</span></span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Snd</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k (<span class="dt">Pair</span> a b) b</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Snd</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k (a, b) b</span>
 <span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Coproduct introduction: (b → a) → (c → a) → (b + c → a)</span></span>
 <span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">CoprodI</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k b a <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k c a </span>
 <span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k (<span class="dt">Either</span> b c) a </span>
@@ -138,6 +140,10 @@ class="sourceCode idr"><code class="sourceCode idris"><span id="cb8-1"><a href="
 <span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Curry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k (a, b) c <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k a (b <span class="ot">-&gt;</span> c) </span>
 <span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Uncurrying: (a → (b ⇨ c)) → (a * b → c) </span></span>
 <span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Uncurry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k a (b <span class="ot">-&gt;</span> c) <span class="ot">-&gt;</span> <span class="dt">FreeBCC</span> k (a, b) c</span></code></pre></div>
+<p>(One important caveat is that our data-type now represents a free
+f-algebra rather than a free category in the strict sense. We'll talk
+more about the distinction in future posts, but for now I'll abuse
+notation and keep calling both concepts by the same name.)</p>
 <p>Defining an evaluator is as simple as it was before, we just match
 each constructor to the corresponding Idris function</p>
 <div class="sourceCode" id="cb9"><pre
@@ -192,20 +198,38 @@ class="sourceCode idr"><code class="sourceCode idris"><span id="cb11-1"><a href=
 corresponding record. Writing out all of these evaluators can become
 tiresome after a while, and indeed, in a few posts we will see how to do
 this entirely generically using recursion schemes.</p>
-<p>Using this we can instantiate our construction with a few choices of
-categories, such as</p>
+<p>As an example, let's create a record that packages up our earlier
+definition of the category of Idris functions.</p>
 <div class="sourceCode" id="cb12"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Cokleisli category of a comonad</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Cokleisli</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="dt">Cokleisli</span> m a b <span class="fu">=</span> m a <span class="ot">-&gt;</span> b </span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co">-- A static effect category over an applicative functor</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="dt">StaticArrow</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="dt">StaticArrow</span> f a b <span class="fu">=</span> f (a <span class="ot">-&gt;</span> b)</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co">-- Freyd category of an arrow</span></span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="dt">Freyd</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="dt">Freyd</span> g a b <span class="fu">=</span> g a b</span></code></pre></div>
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>  <span class="dt">IdrCat</span> <span class="ot">:</span> <span class="dt">Category</span> <span class="dt">Idr</span> </span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">IdrCat</span> <span class="fu">=</span> <span class="dt">MkCat</span> </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    id </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    (<span class="fu">.</span>) </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    (<span class="fu">\</span>f, g, c <span class="ot">=&gt;</span> (f c, g c)) </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    fst </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    snd </span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    (<span class="fu">\</span>f, g, c <span class="ot">=&gt;</span> <span class="kw">case</span> c <span class="kw">of</span> </span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">Left</span> l <span class="ot">=&gt;</span> f l </span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">Right</span> r <span class="ot">=&gt;</span> g r) </span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Left</span> </span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Right</span> </span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    (uncurry apply) </span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    curry </span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    uncurry</span></code></pre></div>
+<p>We could also instantiate our record with a few choices of
+categories, such as</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Cokleisli category of a comonad</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Cokleisli</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="dt">Cokleisli</span> m a b <span class="fu">=</span> m a <span class="ot">-&gt;</span> b </span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co">-- A static effect category over an applicative functor</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="dt">StaticArrow</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="dt">StaticArrow</span> f a b <span class="fu">=</span> f (a <span class="ot">-&gt;</span> b)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co">-- Freyd category of an arrow</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="dt">Freyd</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="dt">Freyd</span> g a b <span class="fu">=</span> g a b</span></code></pre></div>
 <p>More on this later!</p>
 <p>In general, it's rare that any of these constructions preserve all of
 our underlying structure (products, coproducts, exponentials), but we
@@ -216,105 +240,106 @@ Categories in General</h3>
 a free bicartesian closed category in general.</p>
 <p>Since we can't reuse Idris types, we now need to define a separate
 datatype for our type universe.</p>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Ty</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Unit</span> <span class="ot">:</span> <span class="dt">Ty</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Prod</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Sum</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Exp</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">N</span> <span class="ot">:</span> <span class="dt">Ty</span></span></code></pre></div>
-<p>And let's define type synonyms for them too</p>
 <div class="sourceCode" id="cb14"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="fu">~&gt;</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">(~&gt;)</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>(<span class="fu">~&gt;</span>) <span class="fu">=</span> <span class="dt">Exp</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="ot">:</span><span class="fu">*:</span> </span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">(:*:)</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>(<span class="ot">:</span><span class="fu">*:</span>) <span class="fu">=</span> <span class="dt">Prod</span> </span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="ot">:</span><span class="fu">+:</span> </span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="fu">(:+:)</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>(<span class="ot">:</span><span class="fu">+:</span>) <span class="fu">=</span> <span class="dt">Sum</span> </span></code></pre></div>
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Ty</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Unit</span> <span class="ot">:</span> <span class="dt">Ty</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Prod</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Sum</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Exp</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">N</span> <span class="ot">:</span> <span class="dt">Ty</span></span></code></pre></div>
+<p>And let's define type synonyms for them too</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="fu">~&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">(~&gt;)</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>(<span class="fu">~&gt;</span>) <span class="fu">=</span> <span class="dt">Exp</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="ot">:</span><span class="fu">*:</span> </span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="fu">(:*:)</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>(<span class="ot">:</span><span class="fu">*:</span>) <span class="fu">=</span> <span class="dt">Prod</span> </span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="ot">:</span><span class="fu">+:</span> </span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="fu">(:+:)</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>(<span class="ot">:</span><span class="fu">+:</span>) <span class="fu">=</span> <span class="dt">Sum</span> </span></code></pre></div>
 <p>Defining the free BCC is just as before, but whereas we previously
 defined it over functions of inbuilt types, we now define it over a
 graph of our new type universe Ty.</p>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">TypedBCC</span> <span class="ot">:</span> <span class="dt">Graph</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Graph</span> <span class="dt">Ty</span> <span class="kw">where</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Embedding a primitive is now a separate operations from &#39;Comp&#39; </span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Prim</span> <span class="ot">:</span> k a b <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a b </span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Identity arrow: a → a</span></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Id</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> p a a </span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Composition of arrows: (b → c) → (a → b) → (a → c)</span></span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Comp</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k b c <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a b <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a c</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Product introduction: (a → b) → (a → c) → (a → (b * c))</span></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ProdI</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a b <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a c </span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a (b <span class="ot">:</span><span class="fu">*:</span> c) </span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- First projection: (a * b) → a</span></span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Fst</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) a</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Second projection: (a * b) → b</span></span>
-<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Snd</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) b</span>
-<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Coproduct introduction: (b → a) → (c → a) → (b + c → a)</span></span>
-<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">CoprodI</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k b a <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k c a </span>
-<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (b <span class="ot">:</span><span class="fu">+:</span> c) a </span>
-<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Left injection: a → (a + b)</span></span>
-<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>  <span class="dt">InL</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a (a <span class="ot">:</span><span class="fu">+:</span> b)</span>
-<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Right injection: b → (a + b)</span></span>
-<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>  <span class="dt">InR</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k b (a <span class="ot">:</span><span class="fu">+:</span> b)</span>
-<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Exponential elimination: </span></span>
-<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Apply</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k ((a <span class="fu">~&gt;</span> b) <span class="ot">:</span><span class="fu">*:</span> a) b</span>
-<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Currying: (a * b → c) → (a → (b ⇨ c)) </span></span>
-<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Curry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) c <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a (b <span class="fu">~&gt;</span> c) </span>
-<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Uncurrying: (a → (b ⇨ c)) → (a * b → c) </span></span>
-<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Uncurry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a (b <span class="fu">~&gt;</span> c) <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) c</span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">TypedBCC</span> <span class="ot">:</span> <span class="dt">Graph</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Graph</span> <span class="dt">Ty</span> <span class="kw">where</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Primitives</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Prim</span> <span class="ot">:</span> k a b <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a b </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Identity arrow: a → a</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Id</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> p a a </span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Composition of arrows: (b → c) → (a → b) → (a → c)</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Comp</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k b c <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a b <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a c</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Product introduction: (a → b) → (a → c) → (a → (b * c))</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ProdI</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a b <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a c </span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a (b <span class="ot">:</span><span class="fu">*:</span> c) </span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- First projection: (a * b) → a</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Fst</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) a</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Second projection: (a * b) → b</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Snd</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) b</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Coproduct introduction: (b → a) → (c → a) → (b + c → a)</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">CoprodI</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k b a <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k c a </span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (b <span class="ot">:</span><span class="fu">+:</span> c) a </span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Left injection: a → (a + b)</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>  <span class="dt">InL</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a (a <span class="ot">:</span><span class="fu">+:</span> b)</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Right injection: b → (a + b)</span></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>  <span class="dt">InR</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k b (a <span class="ot">:</span><span class="fu">+:</span> b)</span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Exponential elimination: </span></span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Apply</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k ((a <span class="fu">~&gt;</span> b) <span class="ot">:</span><span class="fu">*:</span> a) b</span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Currying: (a * b → c) → (a → (b ⇨ c)) </span></span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Curry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) c <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a (b <span class="fu">~&gt;</span> c) </span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Uncurrying: (a → (b ⇨ c)) → (a * b → c) </span></span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Uncurry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k a (b <span class="fu">~&gt;</span> c) <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) c</span></code></pre></div>
 <p>The main difference from before is that our primitives are no longer
 a simple embedding of Idris functions. Now we need a separate type for
 representing them. As an example, let's use the generators of a monoid
 over some base type:</p>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Prim</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Unit</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">E</span> <span class="ot">:</span> <span class="dt">Prim</span> <span class="dt">Unit</span> <span class="dt">Base</span> </span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Multiplication</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Mult</span> <span class="ot">:</span> (<span class="dt">Prod</span> <span class="dt">Base</span> <span class="dt">Base</span>) <span class="dt">Base</span></span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Prim</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Unit</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">E</span> <span class="ot">:</span> <span class="dt">Prim</span> <span class="dt">Unit</span> <span class="dt">Base</span> </span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Multiplication</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Mult</span> <span class="ot">:</span> (<span class="dt">Prod</span> <span class="dt">Base</span> <span class="dt">Base</span>) <span class="dt">Base</span></span></code></pre></div>
 <p>Most of our remaining definition stays exactly the same! This will
 become a running theme in this series, where adding extra generality
 will give us more power without too much extra complexity.</p>
 <p>We can recover our earlier evaluator once we provide an
 interpretation of our type universe into Idris types</p>
-<div class="sourceCode" id="cb17"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalTy</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>evalTy <span class="dt">U</span> <span class="fu">=</span> ()</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Imp</span> t1 t2) <span class="fu">=</span> (evalTy t1) <span class="ot">-&gt;</span> (evalTy t2)</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Prod</span> t1 t2) <span class="fu">=</span> (evalTy t1, evalTy t2)</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Sum</span> t1 t2) <span class="fu">=</span> <span class="dt">Either</span> (evalTy t1) (evalTy t2)</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- We&#39;ll interpret our base type as the type of naturals</span></span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>evalTy <span class="dt">N</span> <span class="fu">=</span> <span class="dt">Nat</span> </span></code></pre></div>
-<p>We can then define an evaluator. First we'll need to interpret the
-type of primitives.</p>
 <div class="sourceCode" id="cb18"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalPrims</span> <span class="ot">:</span> <span class="dt">Prims</span> ty1 ty2 <span class="ot">-&gt;</span> <span class="dt">Idr</span> (evalTy ty1) (evalTy ty2)</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>evalPrims <span class="dt">E</span> <span class="fu">=</span> <span class="fu">\</span>() <span class="ot">=&gt;</span> <span class="dv">0</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>evalPrims <span class="dt">Mult</span> <span class="fu">=</span> uncurry (<span class="fu">+</span>)</span></code></pre></div>
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalTy</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>evalTy <span class="dt">U</span> <span class="fu">=</span> <span class="dt">Unit</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Exp</span> t1 t2) <span class="fu">=</span> (evalTy t1) <span class="ot">-&gt;</span> (evalTy t2)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Prod</span> t1 t2) <span class="fu">=</span> (evalTy t1, evalTy t2)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Sum</span> t1 t2) <span class="fu">=</span> <span class="dt">Either</span> (evalTy t1) (evalTy t2)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- We&#39;ll interpret our base type as the type of naturals</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>evalTy <span class="dt">N</span> <span class="fu">=</span> <span class="dt">Nat</span> </span></code></pre></div>
+<p>We can then define an evaluator. We'll start by interpreting in Idris
+functions, then generalise to records again. First we'll need to
+interpret the type of primitives.</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalPrims</span> <span class="ot">:</span> <span class="dt">Prims</span> ty1 ty2 <span class="ot">-&gt;</span> <span class="dt">Idr</span> (evalTy ty1) (evalTy ty2)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>evalPrims <span class="dt">E</span> <span class="fu">=</span> <span class="fu">\</span>() <span class="ot">=&gt;</span> <span class="dv">0</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>evalPrims <span class="dt">Mult</span> <span class="fu">=</span> uncurry (<span class="fu">+</span>)</span></code></pre></div>
 <p>Then we'll write out interpreter for the rest of terms. We could have
 parametrised our eval function by evalPrims, but for now we'll keep
 things simple.</p>
-<div class="sourceCode" id="cb19"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">eval</span> <span class="ot">:</span> <span class="dt">TypedBCC</span> <span class="dt">Prims</span> ty1 ty2 <span class="ot">-&gt;</span> <span class="dt">Idr</span> (evalTy ty1) (evalTy ty2)</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Prim</span> f) <span class="fu">=</span> evalPrims f  </span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">Id</span> <span class="fu">=</span> id</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Comp</span> f g) <span class="fu">=</span> (eval f) <span class="fu">.</span> (eval g) </span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">ProdI</span> f g) <span class="fu">=</span> <span class="fu">\</span>c <span class="ot">=&gt;</span> ((eval f) c, (eval g) c)   </span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">Fst</span> <span class="fu">=</span> fst</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">Snd</span> <span class="fu">=</span> snd</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">CoprodI</span> f g) <span class="fu">=</span> <span class="fu">\</span>c <span class="ot">=&gt;</span> <span class="kw">case</span> c <span class="kw">of</span> </span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Left</span> l <span class="ot">=&gt;</span> (eval f) l </span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Right</span> r <span class="ot">=&gt;</span> (eval g) r </span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">InL</span> <span class="fu">=</span> <span class="dt">Left</span> </span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">InR</span> <span class="fu">=</span> <span class="dt">Right</span> </span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">Apply</span> <span class="fu">=</span> uncurry apply</span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Curry</span> f) <span class="fu">=</span> curry <span class="fu">$</span> eval f </span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Uncurry</span> f) <span class="fu">=</span> uncurry <span class="fu">$</span> eval f  </span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">eval</span> <span class="ot">:</span> <span class="dt">TypedBCC</span> <span class="dt">Prims</span> ty1 ty2 <span class="ot">-&gt;</span> <span class="dt">Idr</span> (evalTy ty1) (evalTy ty2)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Prim</span> f) <span class="fu">=</span> evalPrims f  </span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">Id</span> <span class="fu">=</span> id</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Comp</span> f g) <span class="fu">=</span> (eval f) <span class="fu">.</span> (eval g) </span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">ProdI</span> f g) <span class="fu">=</span> <span class="fu">\</span>c <span class="ot">=&gt;</span> ((eval f) c, (eval g) c)   </span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">Fst</span> <span class="fu">=</span> fst</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">Snd</span> <span class="fu">=</span> snd</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">CoprodI</span> f g) <span class="fu">=</span> <span class="fu">\</span>c <span class="ot">=&gt;</span> <span class="kw">case</span> c <span class="kw">of</span> </span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Left</span> l <span class="ot">=&gt;</span> (eval f) l </span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Right</span> r <span class="ot">=&gt;</span> (eval g) r </span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">InL</span> <span class="fu">=</span> <span class="dt">Left</span> </span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">InR</span> <span class="fu">=</span> <span class="dt">Right</span> </span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>eval <span class="dt">Apply</span> <span class="fu">=</span> uncurry apply</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Curry</span> f) <span class="fu">=</span> curry <span class="fu">$</span> eval f </span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Uncurry</span> f) <span class="fu">=</span> uncurry <span class="fu">$</span> eval f  </span></code></pre></div>
 <p>The main thing that's changed is that now instead of evaluating into
 Idris functions directly, we must first evaluate our source and target
 types. Thanks to the magic of dependent types, our compiler knows what
@@ -332,47 +357,47 @@ evaluating the objects
 <p>We'll package up the evaluator for objects in a more modular way
 later, but for now let's just stick the entire thing into our definition
 of a BCC:</p>
-<div class="sourceCode" id="cb20"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">record</span> <span class="dt">BCC</span> {obj<span class="ot">:</span> <span class="dt">Type</span>} (g<span class="ot">:</span> <span class="dt">Graph</span> obj) <span class="kw">where</span> </span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">constructor</span> <span class="dt">MkCat</span> </span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- evaluator for objects</span></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ty</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> obj</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- evaluator for morphisms</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">id</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty a) (ty a)</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">comp</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty b) (ty c) <span class="ot">-&gt;</span> g (ty a) (ty b) </span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> g (ty a) (ty c)</span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prod</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty c) (ty a) <span class="ot">-&gt;</span> g (ty c) (ty b) </span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> g (ty c) (ty (a <span class="ot">:</span><span class="fu">*:</span> b))</span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fst</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">*:</span> b)) (ty a)</span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">snd</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">*:</span> b)) (ty b)</span>
-<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coprod</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty a) (ty c) <span class="ot">-&gt;</span> g (ty b) (ty c) </span>
-<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">+:</span> b)) (ty c)</span>
-<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty a) (ty (a <span class="ot">:</span><span class="fu">+:</span> b))</span>
-<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">right</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty b) (ty (a <span class="ot">:</span><span class="fu">+:</span> b))</span>
-<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">apply</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty ((a <span class="fu">~&gt;</span> b) <span class="ot">:</span><span class="fu">*:</span> a)) (ty b) </span>
-<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">curry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">*:</span> b)) (ty c) <span class="ot">-&gt;</span> g (ty a) (ty (b <span class="fu">~&gt;</span> c))</span>
-<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">uncurry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty a) (ty (b <span class="fu">~&gt;</span> c)) <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">*:</span> b)) (ty c)</span>
-<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- evaluator for primitives</span></span>
-<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">e</span> <span class="ot">:</span> g (ty <span class="dt">Unit</span>) (ty <span class="dt">N</span>)</span>
-<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mult</span> <span class="ot">:</span> g (ty (<span class="dt">N</span> <span class="ot">:</span><span class="fu">*:</span> <span class="dt">N</span>)) (ty <span class="dt">N</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">record</span> <span class="dt">BCC</span> {obj<span class="ot">:</span> <span class="dt">Type</span>} (g<span class="ot">:</span> <span class="dt">Graph</span> obj) <span class="kw">where</span> </span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">constructor</span> <span class="dt">MkCat</span> </span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- evaluator for objects</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ty</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> obj</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- evaluator for morphisms</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">id</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty a) (ty a)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">comp</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty b) (ty c) <span class="ot">-&gt;</span> g (ty a) (ty b) </span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> g (ty a) (ty c)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prod</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty c) (ty a) <span class="ot">-&gt;</span> g (ty c) (ty b) </span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> g (ty c) (ty (a <span class="ot">:</span><span class="fu">*:</span> b))</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fst</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">*:</span> b)) (ty a)</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">snd</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">*:</span> b)) (ty b)</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coprod</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty a) (ty c) <span class="ot">-&gt;</span> g (ty b) (ty c) </span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">+:</span> b)) (ty c)</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty a) (ty (a <span class="ot">:</span><span class="fu">+:</span> b))</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">right</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty b) (ty (a <span class="ot">:</span><span class="fu">+:</span> b))</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">apply</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty ((a <span class="fu">~&gt;</span> b) <span class="ot">:</span><span class="fu">*:</span> a)) (ty b) </span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">curry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">*:</span> b)) (ty c) <span class="ot">-&gt;</span> g (ty a) (ty (b <span class="fu">~&gt;</span> c))</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">uncurry</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> g (ty a) (ty (b <span class="fu">~&gt;</span> c)) <span class="ot">-&gt;</span> g (ty (a <span class="ot">:</span><span class="fu">*:</span> b)) (ty c)</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- evaluator for primitives</span></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">e</span> <span class="ot">:</span> g (ty <span class="dt">Unit</span>) (ty <span class="dt">N</span>)</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mult</span> <span class="ot">:</span> g (ty (<span class="dt">N</span> <span class="ot">:</span><span class="fu">*:</span> <span class="dt">N</span>)) (ty <span class="dt">N</span>)</span></code></pre></div>
 <p>We've also included an evaluator for our primitives, in this case the
 multiplication and unit of a monoid.</p>
 <p>Our final evaluator is then</p>
-<div class="sourceCode" id="cb21"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">eval&#39;</span> <span class="ot">:</span> (b <span class="ot">:</span> <span class="dt">BCC</span> g) <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> <span class="dt">Prims</span> ty1 ty2 <span class="ot">-&gt;</span> g (b<span class="fu">.</span>ty ty1) (b<span class="fu">.</span>ty ty2) </span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Prim</span> <span class="dt">E</span>) <span class="fu">=</span> alg<span class="fu">.</span>e  </span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Prim</span> <span class="dt">Mult</span>) <span class="fu">=</span> alg<span class="fu">.</span>mult </span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">Id</span>  <span class="fu">=</span> alg<span class="fu">.</span>id </span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Comp</span> f g) <span class="fu">=</span> alg<span class="fu">.</span>comp (eval&#39; alg f) (eval&#39; alg g) </span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">ProdI</span> f g) <span class="fu">=</span> alg<span class="fu">.</span>prod (eval&#39; alg f) (eval&#39; alg g) </span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">Fst</span> <span class="fu">=</span> alg<span class="fu">.</span>fst</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">Snd</span> <span class="fu">=</span> alg<span class="fu">.</span>snd</span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">CoprodI</span> f g) <span class="fu">=</span> alg<span class="fu">.</span>coprod (eval&#39; alg f) (eval&#39; alg g)</span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">InL</span> <span class="fu">=</span> alg<span class="fu">.</span>left  </span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">InR</span> <span class="fu">=</span> alg<span class="fu">.</span>right</span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">Apply</span> <span class="fu">=</span> alg<span class="fu">.</span>apply</span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Curry</span> f) <span class="fu">=</span> alg<span class="fu">.</span>curry (eval&#39; alg f) </span>
-<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Uncurry</span> f) <span class="fu">=</span> alg<span class="fu">.</span>uncurry (eval&#39; alg f)  </span></code></pre></div>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">eval&#39;</span> <span class="ot">:</span> (bcc <span class="ot">:</span> <span class="dt">BCC</span> g) <span class="ot">-&gt;</span> <span class="dt">TypedBCC</span> <span class="dt">Prims</span> ty1 ty2 <span class="ot">-&gt;</span> g (bcc<span class="fu">.</span>ty ty1) (bcc<span class="fu">.</span>ty ty2) </span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Prim</span> <span class="dt">E</span>) <span class="fu">=</span> alg<span class="fu">.</span>e  </span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Prim</span> <span class="dt">Mult</span>) <span class="fu">=</span> alg<span class="fu">.</span>mult </span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">Id</span>  <span class="fu">=</span> alg<span class="fu">.</span>id </span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Comp</span> f g) <span class="fu">=</span> alg<span class="fu">.</span>comp (eval&#39; alg f) (eval&#39; alg g) </span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">ProdI</span> f g) <span class="fu">=</span> alg<span class="fu">.</span>prod (eval&#39; alg f) (eval&#39; alg g) </span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">Fst</span> <span class="fu">=</span> alg<span class="fu">.</span>fst</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">Snd</span> <span class="fu">=</span> alg<span class="fu">.</span>snd</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">CoprodI</span> f g) <span class="fu">=</span> alg<span class="fu">.</span>coprod (eval&#39; alg f) (eval&#39; alg g)</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">InL</span> <span class="fu">=</span> alg<span class="fu">.</span>left  </span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">InR</span> <span class="fu">=</span> alg<span class="fu">.</span>right</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>eval&#39; alg <span class="dt">Apply</span> <span class="fu">=</span> alg<span class="fu">.</span>apply</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Curry</span> f) <span class="fu">=</span> alg<span class="fu">.</span>curry (eval&#39; alg f) </span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>eval&#39; alg (<span class="dt">Uncurry</span> f) <span class="fu">=</span> alg<span class="fu">.</span>uncurry (eval&#39; alg f)  </span></code></pre></div>
 <p>Overall, we can see that even as we've increased the complexity of
 the language, the structure of our evaluator has stayed the same. This
 is because at the core, an evaluator for an inductive type is nothing
@@ -393,486 +418,5 @@ lambda calculus and translate it into our combinator language, thus
 showing how to interpret the STLC into an arbitrary bicartesian closed
 category. After that, we'll start in earnest, and introduce the main
 tool we'll be using throughout the series - recursion schemes.</p>]]></content>
-  </entry>
-  <entry>
-      <title>From Fixpoint of Functor to Operad</title>
-      <link href="https://zanzix.github.ioposts/from-functor-to-operad.html"/>
-      <id>https://zanzix.github.ioposts/from-functor-to-operad.html</id>
-      <updated>2023-08-10T00:00:00Z</updated>
-      <category term="functor"/>
-      <category term="fixpoint"/>
-      <category term="operad"/>
-      <summary>Lets start the blog</summary>
-      <content type="html"><![CDATA[<ul>
-<li>start with a definition of a recursive type, ie List, and then
-extract the base functor</li>
-</ul>
-<p>First, lets introduce the fixpoint of an endofunctor</p>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Mu</span> <span class="ot">:</span> (<span class="kw">pattern</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>	<span class="dt">In</span> <span class="ot">:</span> {f<span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> f (<span class="dt">Mu</span> f) <span class="ot">-&gt;</span> <span class="dt">Mu</span> f</span></code></pre></div>
-<p>We can build expressions with it</p>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>example expressions</span></code></pre></div>
-<p>to evaluate them, we define a notion of algebra</p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Algebra</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">Algebra</span> f a <span class="fu">=</span> f a <span class="ot">-&gt;</span> a</span></code></pre></div>
-<p>and we define a catamorphism, or a fold, which uniformly evaluates
-any 'f' that's a functor</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cata</span> <span class="ot">:</span> <span class="dt">Functor</span> f <span class="ot">=&gt;</span> <span class="dt">Algebra</span> f a <span class="ot">-&gt;</span> <span class="dt">Mu</span> f <span class="ot">-&gt;</span> a</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>cata alg (<span class="dt">In</span> op) <span class="fu">=</span> alg (map (cata alg) op)</span></code></pre></div>
-<p>TODO: Try doing this with mendler-style eval which doesn't rely on
-Functor</p>
-<p>Now, this gives us a notion of closed expression. We can represent
-algebraic signatures, say, Monoids, Semirings, and we can evaluate
-them.</p>
-<p>But it doesn't quite feel like universal algebra, since we don't have
-variables. To get variables, we move up a level of abstraction. Instead
-of using fixpoints over endofunctors, we work with free monads.</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Free</span> <span class="ot">:</span> (<span class="kw">pattern</span><span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>)) <span class="ot">-&gt;</span> (var<span class="ot">:</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>	<span class="dt">Var</span> <span class="ot">:</span> var <span class="ot">-&gt;</span> <span class="dt">Free</span> pat var</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>	<span class="dt">In</span> <span class="ot">:</span> pat (<span class="dt">Free</span> pat var) <span class="ot">-&gt;</span> <span class="dt">Free</span> pat var</span></code></pre></div>
-<p>The only thing that's changed is that we've added the extra
-constructor Var, and the extra type-variable into the type of Free</p>
-<p>Indeed, Mu f = Free f Void and Free f a = Mu (f + Const)</p>
-<p>But the perspective is valuable, because previously, we took a
-functor to a value</p>
-<p>Functor : Type -&gt; Type Functor a = a -&gt; a</p>
-<p>Mu : (Functor Type) -&gt; Type</p>
-<p>Whereas Free takes a functor to a functor</p>
-<p>Free : (Functor Type) -&gt; (Functor Type)</p>
-<p>What this means in practice is that we can now construct terms with
-variables</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>example terms</span></code></pre></div>
-<p>and our evaluator takes an extra parameter, to know how to handle
-variables</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mcata</span> <span class="ot">:</span> (a <span class="ot">-&gt;</span> c) <span class="ot">-&gt;</span> <span class="dt">Algebra</span> f c <span class="ot">-&gt;</span> <span class="dt">Free</span> f a <span class="ot">-&gt;</span> c</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>mcata g alg <span class="fu">=</span> go <span class="kw">where</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">go</span> <span class="ot">:</span> <span class="dt">Free</span> f a <span class="ot">-&gt;</span> c</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>go (<span class="dt">Var</span> a) <span class="fu">=</span> g a</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>go (<span class="dt">In</span> <span class="fu">$</span> fs) <span class="fu">=</span> alg <span class="fu">$</span> (mcata g alg) fs</span></code></pre></div>
-<p>This is nice, but unfortunately our function mcata is now partial,
-since our terms are not well scoped</p>
-<p>To fix this, we can change our domain from c to 'Maybe c', or maybe
-some other exception-uandling monad m</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">partialEval</span> <span class="ot">:</span> (a <span class="ot">-&gt;</span> c) <span class="ot">-&gt;</span> <span class="dt">Algebra</span> f c <span class="ot">-&gt;</span> <span class="dt">Free</span> f a <span class="ot">-&gt;</span> m c</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>partialEval g alg <span class="fu">=</span> go <span class="kw">where</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">go</span> <span class="ot">:</span> <span class="dt">Free</span> f a <span class="ot">-&gt;</span> c</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>go (<span class="dt">Var</span> a) <span class="fu">=</span> pure <span class="fu">$</span> g a</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>go (<span class="dt">In</span> <span class="fu">$</span> fs) <span class="fu">=</span> alg <span class="fu">$</span> (mcata g alg) fs</span></code></pre></div>
-<p>And indeed, this is a common way of doings things in Haskell. But it
-doesn't solve the problem, it just pushes it into the codomain.</p>
-<p>Since we're using dependent types, we can go a step further, and
-define well-scoped terms by construction.</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Operad</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (<span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="kw">where</span> </span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="dt">Var</span> <span class="ot">:</span> <span class="dt">Fin</span> n <span class="ot">-&gt;</span> <span class="dt">Operad</span> f n a</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="dt">LetF</span> <span class="ot">:</span> f (<span class="dt">Operad</span> f (<span class="dt">S</span> n) a) <span class="ot">-&gt;</span> <span class="dt">Operad</span> f n a</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="dt">LetBind</span> <span class="ot">:</span> f a <span class="ot">-&gt;</span> <span class="dt">Operad</span> f (<span class="dt">S</span> n) a <span class="ot">-&gt;</span> <span class="dt">Operad</span> f n a)</span></code></pre></div>
-<p>TODO: might need to change it to Nat -&gt; Type -&gt; Type to be more
-regular? it'd make it consistent with typed languages: List Ty -&gt; Ty
--&gt; Type</p>
-<p>This time, our Var constructor is bound by Fin. Instead of working
-with an infinite set of variable, we work with a finite set of variables
-at a time.</p>
-<p>And whereas previously Bind would append a functorial layer into a
-monad, now it binds it to a variable S. * mention that operad is no
-longer a functor between functors, but between a functor and an indexed
-functor</p>
-<p>Let's look at some example expressions</p>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>examples</span></code></pre></div>
-<p>Now our evaluator looks like this</p>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mcata</span> <span class="ot">:</span> (<span class="dt">Fin</span> n <span class="ot">-&gt;</span> c) <span class="ot">-&gt;</span> <span class="dt">Algebra</span> f c <span class="ot">-&gt;</span> <span class="dt">Operad</span> f n <span class="ot">-&gt;</span> c</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>mcata g alg <span class="fu">=</span> go <span class="kw">where</span></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="fu">go</span> <span class="ot">:</span> <span class="dt">Free</span> f a <span class="ot">-&gt;</span> c</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>go (<span class="dt">Var</span> a) <span class="fu">=</span> g a</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>go (<span class="dt">In</span> <span class="fu">$</span> fs) <span class="fu">=</span> alg <span class="fu">$</span> (mcata g alg) fs</span></code></pre></div>
-<p>The cool thing about this is that our evaluator hardly changed.</p>
-<p>While Operad is no longer a monad, it's a free <em>relative</em>
-monad. Aka, a monad relative to Fin.</p>
-<p>But we can form relative monads over other types as well. What they
-give us, is a very general notion of binding with respect to some
-context.</p>
-<p>We will come back to relative monads soon, but for now let's look at
-the common abstraction that underlies all of these constructions.</p>
-<p>But before we can do that, we need to generalise slightly.</p>]]></content>
-  </entry>
-  <entry>
-      <title>Fixpoints all the way up</title>
-      <link href="https://zanzix.github.ioposts/higher-fixpoints.html"/>
-      <id>https://zanzix.github.ioposts/higher-fixpoints.html</id>
-      <updated>2023-08-10T00:00:00Z</updated>
-      <category term="functor"/>
-      <category term="fixpoint"/>
-      <category term="operad"/>
-      <summary>Lets start the blog</summary>
-      <content type="html"><![CDATA[<h1 id="higher-order-fixpoint">Higher order fixpoint</h1>
-<p>Last blog post we looked at fixpoints over endofunctors, free monads,
-and free operads.</p>
-<p>It might seem like a lot of concepts.</p>
-<p>But the secret is that they're all instances of the same thing...</p>
-<p>Let's start with the free monad</p>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Free</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>	<span class="dt">Var</span> <span class="ot">:</span> v <span class="ot">-&gt;</span> <span class="dt">Free</span> f v</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>	<span class="dt">In</span> <span class="ot">:</span> f (<span class="dt">Free</span> f v) <span class="ot">-&gt;</span> <span class="dt">Free</span> f v</span></code></pre></div>
-<p>We can notice a similarity with the type of Lists, and ineed a free
-monad is just a list 'one level up'.</p>
-<p>So what happens if, just as we did in the first blog post, we extract
-the recursive component of Free?</p>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">FreeF</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>	<span class="dt">Var</span> <span class="ot">:</span> v <span class="ot">-&gt;</span> <span class="dt">Free</span> f g v</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>	<span class="dt">In</span> <span class="ot">:</span> f (g v) <span class="ot">-&gt;</span> <span class="dt">Free</span> f g v</span></code></pre></div>
-<p>Rewriting the types a litte, we can see the clear link with ListF</p>
-<p>FreeF : Functor Type -&gt; Functor Type -&gt; Functor Type ListF :
-Type -&gt; Type -&gt; Type</p>
-<p>In fact, if we change the arrows a little</p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">(:~&gt;)</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>(<span class="ot">:</span><span class="fu">~&gt;</span>) f g <span class="fu">=</span> {a <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> f a <span class="ot">-&gt;</span> g a</span></code></pre></div>
-<p>We will see that</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Var</span> <span class="ot">:</span> <span class="dt">I</span> <span class="ot">:</span><span class="fu">~&gt;</span> <span class="dt">Free</span> f g </span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">In</span> <span class="ot">:</span> f g <span class="fu">~&gt;</span> <span class="dt">Free</span> f g</span></code></pre></div>
-<p>Looks a lot like</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Nil</span> <span class="ot">:</span> () <span class="ot">-&gt;</span> <span class="dt">ListF</span> a b</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Cons</span> <span class="ot">:</span> (a, b) <span class="ot">-&gt;</span> <span class="dt">ListF</span> a b</span></code></pre></div>
-<p>With the main difference is that ListF is a monoid with respect to
-the cartesian product, while FreeF is a monoid with respect to functor
-composition (It is in fact a <em>category</em> with respect to functor
-composition, but we will get to that later...)</p>
-<p>Since Free is a functor, specifically in the category of
-endofunctors, it will have a corresponding notion of fixpoint</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Mu2</span> <span class="ot">:</span> (<span class="kw">pattern</span><span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>)) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>	<span class="dt">In2</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> f (<span class="dt">Mu</span> f) a <span class="ot">-&gt;</span> <span class="dt">Mu</span> f a</span></code></pre></div>
-<p>We can see that it's just Mu one level up</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Mu2</span> <span class="ot">:</span> (<span class="dt">Functor</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Functor</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Functor</span> <span class="dt">Type</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Mu</span> <span class="ot">:</span>  (        <span class="dt">Type</span> <span class="ot">-&gt;</span>         <span class="dt">Type</span>) <span class="ot">-&gt;</span>         <span class="dt">Type</span></span></code></pre></div>
-<p>As a fixpoint of endofunctor, Mu2 will also have its own notion of
-algebra</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Algebra</span> <span class="ot">:</span> (f <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (a <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Algebra</span> f a <span class="fu">=</span> f a <span class="ot">:</span><span class="fu">~&gt;</span> a</span></code></pre></div>
-<p>or more simply</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Algebra</span> <span class="ot">:</span> (<span class="dt">Functor</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Functor</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Functor</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span></code></pre></div>
-<p>And a notion of fold</p>
-<pre><code>cata : Functor2 hf =&gt; (hf f :~&gt; f) -&gt; Mu hf :~&gt; f
-
-cata alg (In op) = alg (maph (cata alg) op)
-</code></pre>
-<p>Now, the evaluator for Mu2 gives us a <em>functor</em>, not a
-<em>value</em></p>
-<p>So if we want to recover our previous evaluator, we need to
-post-compose it with a first-order evaluator</p>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Algebra2</span> (<span class="dt">FreeF</span>) (<span class="dt">Fix</span> <span class="dt">List</span>)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>eval <span class="fu">=</span> fold alg (fold alg2 expr) </span></code></pre></div>
-<p>The advantage of this approach is that we separate our evaluation.
-The monadic stage covers variable binding and substitution, and the
-functor stage covers evaluating the expression itself</p>
-<p>We can also evaluate our expression into a value directly, using the
-konstant functor</p>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Algebra2</span> (<span class="dt">FreeF</span>) (<span class="dt">Konst</span> <span class="dt">Nat</span>)</span></code></pre></div>
-<h1 id="indexed-fixpoint">Indexed fixpoint</h1>
-<p>Our operad is also an example of a higher-order fixpoint</p>
-<p>This time, instead of functors over the category of functors, we take
-functors over the category of indexed functors</p>
-<p>as before, we extract our recursive component</p>
-<pre><code>data Operad : (Type -&gt; Type) -&gt; (Nat -&gt; Type -&gt; Type) -&gt; (Nat -&gt; Type -&gt; Type) where 
-
-	Var : Fin n -&gt; Operad f g n a
-
-	LetF : f (g (S n) a) -&gt; Operad f g n a
-
--- (Type -&gt; Type) -&gt; (Type -&gt; Type) -&gt; Type -&gt; Type </code></pre>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Mu</span> <span class="ot">:</span> ((k <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (i <span class="ot">-&gt;</span> k <span class="ot">-&gt;</span> <span class="dt">Type</span>)) <span class="ot">-&gt;</span> i <span class="ot">-&gt;</span> k <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>	<span class="dt">In</span> <span class="ot">:</span> f (<span class="dt">Mu</span> f) n a <span class="ot">-&gt;</span> <span class="dt">Mu</span> f n a</span></code></pre></div>
-<p>TODO: Does this actually work?</p>
-<p>and we evaluate it</p>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>cata </span></code></pre></div>
-<p>The nice thing about this type is that it works over our regular
-data-types (Type -&gt; Type),</p>
-<p>but if we want a more regualr fixpoint, we could also do</p>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Mu</span> <span class="ot">:</span> ((k <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (k <span class="ot">-&gt;</span> <span class="dt">Type</span>)) <span class="ot">-&gt;</span> k <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>	<span class="dt">In</span> <span class="ot">:</span> f (<span class="dt">Mu</span> f) a <span class="ot">-&gt;</span> <span class="dt">Mu</span> f a</span></code></pre></div>
-<p>and we can recover our Operad by setting k = (Nat, Type)</p>
-<p>TODO: pattern for free relative monad?</p>
-<p>So the purpose of this blog post was to introduce higher-order
-fixpoint, and show how they subsume both free monads and free
-operads.</p>
-<p>And since, as we learned from the previous blog post, we can upgrade
-Mu to Free, the same is true of Mu2 and IxMu</p>
-<p>For Mu2, we get Free2</p>
-<div class="sourceCode" id="cb17"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- data Free :  (Functor Type -&gt; Functor Type) -&gt; Functor Type -&gt; Functor Type</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co">-- this might be wrong</span></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Free</span> <span class="ot">:</span> (<span class="kw">pattern</span><span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>)) <span class="ot">-&gt;</span> (var<span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (value<span class="ot">:</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="dt">Var</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> v a <span class="ot">-&gt;</span> <span class="dt">Free</span> f v a</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="dt">In2</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> f (<span class="dt">Free</span> f v) a <span class="ot">-&gt;</span> <span class="dt">Free</span> f v a</span></code></pre></div>
-<p>Whereas a first-order free monad has variables that range over
-values, a second-order free monad has variables that range over
-functors.</p>
-<p>And for MuIx, we get FreeIx</p>
-<div class="sourceCode" id="cb18"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">FreeI</span> <span class="ot">:</span> (<span class="kw">pattern</span><span class="ot">:</span> (k <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (k <span class="ot">-&gt;</span> <span class="dt">Type</span>)) <span class="ot">-&gt;</span> (con<span class="ot">:</span> k <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (value<span class="ot">:</span> k) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="dt">Var</span> <span class="ot">:</span> {a <span class="ot">:</span> k} <span class="ot">-&gt;</span> con a <span class="ot">-&gt;</span> <span class="dt">FreeI</span> f con a</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="dt">In2</span> <span class="ot">:</span> {a <span class="ot">:</span> k} <span class="ot">-&gt;</span> f (<span class="dt">FreeI</span> f con) a <span class="ot">-&gt;</span> <span class="dt">FreeI</span> f con a</span></code></pre></div>]]></content>
-  </entry>
-  <entry>
-      <title>Fixpoints all the way up</title>
-      <link href="https://zanzix.github.ioposts/indexed-fixpoints.html"/>
-      <id>https://zanzix.github.ioposts/indexed-fixpoints.html</id>
-      <updated>2023-08-10T00:00:00Z</updated>
-      <category term="functor"/>
-      <category term="fixpoint"/>
-      <category term="operad"/>
-      <summary>Lets start the blog</summary>
-      <content type="html"><![CDATA[<p>In the previous blog posts, we've looked at free operads for
-well-scoped domain specific languages. A natural question to ask, is
-what would it mean to have a well-typed language?</p>
-<p>TODO: Start with Type -&gt; Type instead of Ty-&gt;Type and show that
-we can extract the recursive component just as well</p>
-<p>We will look at it in this blog post.</p>
-<p>Let's say we have a simple language, with Booleans and Arithmetic</p>
-<p>First we define our types</p>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Ty</span> <span class="fu">=</span> <span class="dt">BOOL</span> <span class="fu">|</span> <span class="dt">NAT</span></span></code></pre></div>
-<p>Then we define our data type, indexed by the types</p>
-<pre><code>data BoolArith : Ty -&gt; Type 
-
-V1 : interpTy type -&gt; BoolArith1 type
-
-AddNat : BoolArith1 NAT -&gt; BoolArith1 NAT -&gt; BoolArith1 NAT
-
-Conj : BoolArith1 BOOL -&gt; BoolArith1 BOOL -&gt; BoolArith1 BOOL
-</code></pre>
-<p>We could write a custom evaluator for our well-typed DSL</p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalBA1</span> <span class="ot">:</span> <span class="dt">BoolArith1</span> t <span class="ot">-&gt;</span> interpTy t</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>evalBA1 (<span class="dt">V1</span> t) <span class="fu">=</span> t</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>evalBA1 (<span class="dt">AddNat</span> e1 e2) <span class="fu">=</span> (evalBA1 e1) <span class="fu">+</span> (evalBA1 e2)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>evalBA1 (<span class="dt">Conj</span> e1 e2) <span class="fu">=</span> (evalBA1 e1) <span class="fu">&amp;&amp;</span> (evalBA1 e2)</span></code></pre></div>
-<p>But instead we'd like to use our general machinery</p>
-<p>So as always, we start by extracting the recursive component</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">BoolArithF</span> <span class="ot">:</span> (<span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (<span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="kw">where</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="dt">VF</span> <span class="ot">:</span> interpTy type <span class="ot">-&gt;</span> <span class="dt">BoolArithF</span> r type</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="dt">AddF</span> <span class="ot">:</span> r <span class="dt">NAT</span> <span class="ot">-&gt;</span> r <span class="dt">NAT</span> <span class="ot">-&gt;</span> <span class="dt">BoolArithF</span> r <span class="dt">NAT</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="dt">ConjF</span> <span class="ot">:</span> r <span class="dt">BOOL</span> <span class="ot">-&gt;</span> r <span class="dt">BOOL</span> <span class="ot">-&gt;</span> <span class="dt">BoolArithF</span> r <span class="dt">BOOL</span></span></code></pre></div>
-<p>We can see that (Ty -&gt; Type) is an indexed data type, so
-BoolArithF is an endofunctor over indexed types</p>
-<p>BoolArithF : Functor (Ty -&gt; Type)</p>
-<p>So to tie the recursive knot, we need a fixpoint over an indexed
-endofunctor</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Mu</span> <span class="ot">:</span> ((k <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (k <span class="ot">-&gt;</span> <span class="dt">Type</span>)) <span class="ot">-&gt;</span> k <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="dt">In</span> <span class="ot">:</span> f (<span class="dt">Mu</span> f) a <span class="ot">-&gt;</span> <span class="dt">Mu</span> f a</span></code></pre></div>
-<p>So now we recover our previous data-type</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">BoolArith</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">BoolArith</span> <span class="fu">=</span> (<span class="dt">Mu</span> <span class="dt">BoolArithF</span>)</span></code></pre></div>
-<p>If we want to evaluate our typed expressions, we can do it just as
-before.</p>
-<pre><code>example of eval</code></pre>
-<p>This is neat, but as in chapter 1, this only gives us closed
-expressions.</p>
-<p>But what if we want our expression language to have variables? ref:
-<a href="https://tyde.systems/post/2019-12-04-razor/"
-class="uri">https://tyde.systems/post/2019-12-04-razor/</a></p>
-<p>As we've seen before, to add variables we need to go from Mu to Free,
-and to make the variables well-scoped, we need to go from Free to
-Operad.</p>
-<p>Let's do that straight away.</p>
-<p>However, what we notice is that while previously our type was</p>
-<p>Operad : (Nat -&gt; Type -&gt; Type)</p>
-<p>this is no longer sufficient for our purposes. Since we have more
-than one type, we need a more expressive scope than Fin</p>
-<p>So what we can notice is that Nat is isomorphic to a list over a
-one-element set Nat == List Unit</p>
-<p>So if we want to go from an untyped language to a typed one, we
-generalise our scope from Nat to List Matching the intuition that an
-untyped language is the same as a language with a single type. Or more
-accurately, a well-scoped language is a typed language with a single
-type.</p>
-<p>So generalising from Nat to List, our constructor for well-typed
-expressions would look like this</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">RazorST</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>	<span class="dt">Let</span> <span class="ot">:</span> <span class="dt">RazorST</span> ctxt a <span class="ot">-&gt;</span> <span class="dt">RazorST</span> (a<span class="ot">::</span>ctxt) b <span class="ot">-&gt;</span> <span class="dt">RazorST</span> ctxt b</span></code></pre></div>
-<p>extracting the recursive component</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">RazorF</span> <span class="ot">:</span> (<span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>	<span class="dt">Let</span> <span class="ot">:</span> f ctxt a <span class="ot">-&gt;</span> f (a<span class="ot">::</span>ctxt) b <span class="ot">-&gt;</span> <span class="dt">RazorST</span> ctxt b</span></code></pre></div>
-<p>A multi-object operad is often called a coloured operad, a
-multi-sorted algebraic theory. They're also often called a
-multi-category, but I would make a distinction that a coloured operad is
-an operad over a finite number of types. A full-fledged multicategory,
-is an operad over an inductively defined set of types.</p>
-<p>But we will get to that later.</p>]]></content>
-  </entry>
-  <entry>
-      <title>From Mendler Algebra to Relative Monads</title>
-      <link href="https://zanzix.github.ioposts/mendler-algebra.html"/>
-      <id>https://zanzix.github.ioposts/mendler-algebra.html</id>
-      <updated>2023-08-10T00:00:00Z</updated>
-      <category term="functor"/>
-      <category term="fixpoint"/>
-      <category term="operad"/>
-      <summary>Lets start the blog</summary>
-      <content type="html"><![CDATA[<p>So far we've relied on all of our underlying data-types to have a
-valid instance.</p>
-<p>But as we intend to generalise a <em>lot</em>, this kind of
-constraint will lead to far too much boilerplate.</p>
-<p>Luckily, we can generalise this away.</p>
-<p>TODO: Try my trick of doing cata with no functor constraint?</p>
-<p>Interestingly, we can do it in two different ways. We can either
-modify our notion of algebra, as is common in the recursion-schemes
-literature</p>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">MAlgebra</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">MAlgebra</span> f c <span class="fu">=</span> {x <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> (x <span class="ot">-&gt;</span> c) <span class="ot">-&gt;</span> f x <span class="ot">-&gt;</span> c</span></code></pre></div>
-<p>Letting us keep the same type of fixpoint Mu,</p>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">fold</span> <span class="ot">:</span> <span class="dt">MAlgebra</span> </span></code></pre></div>
-<p>Or we can modify our notion of the data-type, as is more common in
-the free-monad literature</p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Freer</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>	<span class="dt">Var</span> <span class="ot">:</span> v <span class="ot">-&gt;</span> <span class="dt">Freerf</span> f v</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>	<span class="dt">Bind</span> <span class="ot">:</span> f x <span class="ot">-&gt;</span> (x <span class="ot">-&gt;</span> <span class="dt">Freer</span> f v) <span class="ot">-&gt;</span> <span class="dt">Freer</span> f v</span></code></pre></div>
-<p>It turns out that both of these techniques are related.</p>
-<p>we can look at Coyoneda,</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Coyoneda</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">InCoyo</span> <span class="ot">:</span> (a <span class="ot">-&gt;</span> b) <span class="ot">-&gt;</span> f a <span class="ot">-&gt;</span> <span class="dt">Coyoneda</span> f b</span></code></pre></div>
-<p>we can notice that MAlgebra f a = Algebra (Coyoneda f) a</p>
-<p>and we can also see that</p>
-<p>Freer f a = Freer (Cyoneda f) a</p>
-<p>from this, we can even derive a notion of 'freer fixpoint'</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Mu</span> <span class="ot">:</span> (<span class="kw">pattern</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">In</span> <span class="ot">:</span> {f<span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">Coyoneda</span> f (<span class="dt">Mu</span> f) <span class="ot">-&gt;</span> <span class="dt">Mu</span> </span></code></pre></div>
-<p>So this gives us a version of Fix and Free that does not rely on an
-underlying functor instance</p>
-<p>But what about Op?</p>
-<p>As I mentioned in the last post, Op is not a free monad, but a free
-<em>relative</em> monad.</p>
-<p>The trick to deriving this is to notice that Coyoneda is a special
-case of a left kan extension, Coyoneda = Lan Id, and that a standard
-monad is a monad w.r.t to the Identity functor. As it turns out, these
-two facts are related.</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Lan</span> <span class="ot">:</span> </span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>	<span class="dt">InLan</span></span></code></pre></div>
-<p>so given a context functor j : (k-&gt;Type), the free relative monad
-over j is given by</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Relative</span> <span class="ot">:</span> {j <span class="ot">:</span> k <span class="ot">-&gt;</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> (k <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (k <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (k <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="kw">where</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="dt">PureR</span> <span class="ot">:</span> {j <span class="ot">:</span> k <span class="ot">-&gt;</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> j x <span class="ot">-&gt;</span> <span class="dt">Relative</span> j f x</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="dt">ThenR</span> <span class="ot">:</span> {j <span class="ot">:</span> k <span class="ot">-&gt;</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> f x <span class="ot">-&gt;</span> (j x <span class="ot">-&gt;</span> <span class="dt">Relative</span> j f a) <span class="ot">-&gt;</span> <span class="dt">Relative</span> j f a</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="dt">Bind</span> <span class="ot">:</span> <span class="dt">Lan</span> j f (<span class="dt">Mu</span> j f v) <span class="ot">-&gt;</span> <span class="dt">Mu</span> j f v</span></code></pre></div>
-<p>our evaluator now uses a new algebra and a new data-type</p>
-<pre><code>cata : {j : k -&gt; Type} -&gt; (j n -&gt; c) -&gt; Algebra (Lan j f) c -&gt; Mu j f n -&gt; c
-cata g alg = go where
-
-go : Mu j f n -&gt; c
-
-go (Var a) = g a
-
-go (Bind $ MkLan continue action) = alg (MkLan (go . continue) action)</code></pre>
-<p>TODO: Will this work with last post's notion of operad (Type -&gt;
-Type) -&gt; (Nat -&gt; Type -&gt; Type) ?</p>
-<p>LetF : f (Operad f (S n) a) -&gt; Operad f n a LetF : Coyoneda f
-(Operad f (S n) a) -&gt; Operad f n a</p>
-<p>LetBind : f a -&gt; Operad f (S n) a -&gt; Operad f n a</p>]]></content>
-  </entry>
-  <entry>
-      <title>Lambda Calculus and Bicartesian Closed Categories, Part 1</title>
-      <link href="https://zanzix.github.ioposts/stlc-idris.html"/>
-      <id>https://zanzix.github.ioposts/stlc-idris.html</id>
-      <updated>2023-08-10T00:00:00Z</updated>
-      <summary>Lets start the blog</summary>
-      <content type="html"><![CDATA[<p>First we will define an intrinsically typed language</p>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode idris"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalTy</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>evalTy <span class="dt">N</span> <span class="fu">=</span> <span class="dt">Nat</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>evalTy <span class="dt">U</span> <span class="fu">=</span> ()</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Imp</span> t1 t2) <span class="fu">=</span> (evalTy t1) <span class="ot">-&gt;</span> (evalTy t2)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Prod</span> t1 t2) <span class="fu">=</span> (evalTy t1, evalTy t2)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Sum</span> t1 t2) <span class="fu">=</span> <span class="dt">Either</span> (evalTy t1) (evalTy t2)</span></code></pre></div>
-<p>As a first-pass, lets translate it into Idris</p>
-<pre><code>STLC -&gt; Idris</code></pre>
-<p>Now we would like to translate it into category theory.</p>
-<p>First define our classes</p>
-<pre><code>Records</code></pre>
-<p>Then define a translation from types</p>
-<pre><code>Ty -&gt; evalTy </code></pre>
-<hr />
-<p>[1] When I say 'free' I mean 'inductively defined'. It's not
-<em>quite</em> free in the proper sense</p>]]></content>
   </entry>
 </feed>

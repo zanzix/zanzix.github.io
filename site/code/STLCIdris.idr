@@ -1,7 +1,4 @@
 -- From Lambda Calculus to Bicartesian Closed Categories, Part 1
-
-
--- TODO: manually get these
 import Data.List.Elem 
 
 {-- 

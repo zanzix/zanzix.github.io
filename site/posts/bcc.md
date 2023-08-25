@@ -4,7 +4,7 @@ author: Zanzi
 date: Aug 10, 2023
 tags: []
 description: Lets start the blog
-image: code.jpg
+image: bibby.png
 ---
 
 ## Into the Bibby Zone 
@@ -20,7 +20,7 @@ Our approach to this will be entirely algebraic (for a very general notion of 'a
 
 This approach is remarkably scalable. We will see how categories, multicategories, bicategories, and double categories can be all be represented as (indexed) functors over an appropriately chosen category. Using tools from recursion schemes, this will give us generic evaluators for a very wide range of structures. 
 
-On the language side, we will start with combinators and build up to simply typed, polymorphic, and dependently-typed languages. At each step we will implement an interpreter between the language syntax and it's categorical semantics. 
+On the language side, we will start with combinators and build up to simply typed, polymorphic, and dependently-typed languages. At each step we will implement an interpreter between the language syntax and its categorical semantics. 
 
 We will use Idris2 as our language, but write our code in a style accessible to Haskell programmers. (Most of the code in the first part of the series should be translatable to Haskell too.)
 
@@ -31,7 +31,7 @@ To start, let's retrace some familiar ground and look at a typed combinator lang
 These first two blog posts are meant as a high level introduction to the basic tools and methodology that we'll be using through the series, and we will revisit these ideas step-by-step in subsequent posts.
 
 
-We'll start with a representation that's familiar to Haskell programmers - a free category over functions. 
+We'll start with a [typical representation of free categories in Haskell](https://hackage.haskell.org/package/free-category-0.0.1.0/docs/Control-Category-Free.html) - a free category over functions. 
 
 ```idr 
 data Free : (g : Type -> Type -> Type) -> Type -> Type -> Type where
@@ -39,7 +39,7 @@ data Free : (g : Type -> Type -> Type) -> Type -> Type -> Type where
   Comp : g b c -> Free g a b -> Free g a c 
 
 ```
-The first parameter 'g' corresponds to some type of Idris functions 'a' and 'b' then correspond to the source and target types of the function, Id is the identity function, and Comp corresponds to embeding a function into a formal composite of functions.  
+The first parameter 'g' corresponds to some type of Idris functions. 'a' and 'b' then correspond to the source and target types of the function, Id is the identity function, and Comp is a formal composite of functions.  
 
 In our case we will use the set of Idris functions 
 ```idr
@@ -73,7 +73,7 @@ data Free : {obj : Type} -> Graph obj -> Graph obj where
   Comp : {a, b, c : obj} -> g b c -> Free g a b -> Free g a c 
 ```
 
-A free category is nothing other than a path constructed from composing individual edges of a graph. 
+A term of a free category is nothing other than a path constructed from composing individual edges of a graph. 
 
 You might notice the correspondence between this type, and that of Lists
 
@@ -85,7 +85,7 @@ data List : Type -> Type where
 
 Which motivates the idea that a category is a typed monoid. 
 
-The evaluator for a free category is very similar to an evaluator for a list, except that we replace each edge with a function rather than an element. 
+The evaluator for a free category is very similar to a fold for a list, except that we replace each edge with a function rather than an element. 
 
 ```idr
 eval : Free Idr a b -> Idr a b 
@@ -93,14 +93,14 @@ eval Id = id
 eval (Comp f g) = f . (eval g)
 ``` 
 
-### The Free Bicartesian Closed Category over Typeds
+### The Free Bicartesian Closed Category over Types
 We will now go from a free category to a free category with products, coproducts, and exponentials. For readers new to category theory, we will go through each of these properties in more granular detail in subsequent blog posts. But for now we will define them all in one go. 
 
 We can then define a free bicartesian category over types as 
 
 ```idr
 data FreeBCC : Graph Type -> Graph Type where
-  -- Embedding a primitive is now a separate operations from 'Comp' 
+  -- Embedding a primitive is now a separate operation from 'Comp' 
   Prim : k a b -> FreeBCC k a b
   -- Identity arrow: a → a
   Id : {a : Type} -> FreeBCC p a a 
@@ -110,9 +110,9 @@ data FreeBCC : Graph Type -> Graph Type where
   ProdI : {a, b, c : Type} -> FreeBCC k a b -> FreeBCC k a c 
     -> FreeBCC k a (b, c) 
   -- First projection: (a * b) → a
-  Fst : {a, b : Type} -> FreeBCC k (Pair a b) a
+  Fst : {a, b : Type} -> FreeBCC k (a, b) a
   -- Second projection: (a * b) → b
-  Snd : {a, b : Type} -> FreeBCC k (Pair a b) b
+  Snd : {a, b : Type} -> FreeBCC k (a, b) b
   -- Coproduct introduction: (b → a) → (c → a) → (b + c → a)
   CoprodI : {a, b, c : Type} -> FreeBCC k b a -> FreeBCC k c a 
     -> FreeBCC k (Either b c) a 
@@ -127,6 +127,8 @@ data FreeBCC : Graph Type -> Graph Type where
   -- Uncurrying: (a → (b ⇨ c)) → (a * b → c) 
   Uncurry : {a, b, c : Type} -> FreeBCC k a (b -> c) -> FreeBCC k (a, b) c
 ```
+
+(One important caveat is that our data-type now represents a free f-algebra rather than a free category in the strict sense. We'll talk more about the distinction in future posts, but for now I'll abuse notation and keep calling both concepts by the same name.)
 
 Defining an evaluator is as simple as it was before, we just match each constructor to the corresponding Idris function
 ```idr
@@ -185,7 +187,27 @@ eval' alg (Uncurry f) = alg.uncurry (eval' alg f)
 
 Our new evaluator simply matches each construct with the corresponding record. Writing out all of these evaluators can become tiresome after a while, and indeed, in a few posts we will see how to do this entirely generically using recursion schemes. 
 
-Using this we can instantiate our construction with a few choices of categories, such as 
+As an example, let's create a record that packages up our earlier definition of the category of Idris functions.
+
+```idr
+  IdrCat : Category Idr 
+  IdrCat = MkCat 
+    id 
+    (.) 
+    (\f, g, c => (f c, g c)) 
+    fst 
+    snd 
+    (\f, g, c => case c of 
+      Left l => f l 
+      Right r => g r) 
+    Left 
+    Right 
+    (uncurry apply) 
+    curry 
+    uncurry
+```
+
+We could also instantiate our record with a few choices of categories, such as 
 
 ```idr
 -- Cokleisli category of a comonad
@@ -240,7 +262,7 @@ Defining the free BCC is just as before, but whereas we previously defined it ov
 
 ```idr
 data TypedBCC : Graph Ty -> Graph Ty where
-  -- Embedding a primitive is now a separate operations from 'Comp' 
+  -- Primitives
   Prim : k a b -> TypedBCC k a b 
   -- Identity arrow: a → a
   Id : {a : Ty} -> TypedBCC p a a 
@@ -283,15 +305,15 @@ We can recover our earlier evaluator once we provide an interpretation of our ty
 
 ```idr
 evalTy : Ty -> Type 
-evalTy U = ()
-evalTy (Imp t1 t2) = (evalTy t1) -> (evalTy t2)
+evalTy U = Unit
+evalTy (Exp t1 t2) = (evalTy t1) -> (evalTy t2)
 evalTy (Prod t1 t2) = (evalTy t1, evalTy t2)
 evalTy (Sum t1 t2) = Either (evalTy t1) (evalTy t2)
 -- We'll interpret our base type as the type of naturals
 evalTy N = Nat 
 
 ```
-We can then define an evaluator. First we'll need to interpret the type of primitives. 
+We can then define an evaluator. We'll start by interpreting in Idris functions, then generalise to records again. First we'll need to interpret the type of primitives. 
 
 ```idr
 evalPrims : Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
@@ -355,7 +377,7 @@ We've also included an evaluator for our primitives, in this case the multiplica
 Our final evaluator is then 
 
 ```idr
-eval' : (b : BCC g) -> TypedBCC Prims ty1 ty2 -> g (b.ty ty1) (b.ty ty2) 
+eval' : (bcc : BCC g) -> TypedBCC Prims ty1 ty2 -> g (bcc.ty ty1) (bcc.ty ty2) 
 eval' alg (Prim E) = alg.e  
 eval' alg (Prim Mult) = alg.mult 
 eval' alg Id  = alg.id 

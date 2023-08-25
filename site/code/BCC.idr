@@ -33,7 +33,7 @@ namespace Cat
   ex1 : Free Idr Nat Nat 
   ex1 = Comp (+1) Id
 
-namespace BCC 
+namespace BCC
   -- Free Bicartesian Closed Category over Idris types and functions
   data FreeBCC : Graph Type -> Graph Type where
     -- Embedding a primitive is now a separate operations from 'Comp' 
@@ -80,11 +80,11 @@ namespace BCC
   
   record Category (g: Graph Type) where 
     constructor MkCat 
-    id : {a: Type} -> g a a 
+    id : {a : Type} -> g a a 
     comp : {a, b, c : Type} -> g b c -> g a b -> g a c
     prod : {a, b, c : Type} -> g c a -> g c b -> g c (a, b)
-    fst : {a, b :Type} -> g (a, b) a 
-    snd : {a, b :Type} -> g (a, b) b
+    fst : {a, b : Type} -> g (a, b) a 
+    snd : {a, b : Type} -> g (a, b) b
     coprod : {a, b, c : Type} -> g a c -> g b c -> g (Either a b) c
     left : {a, b : Type} -> g a (Either a b)
     right : {a, b : Type} -> g b (Either a b)
@@ -105,6 +105,23 @@ namespace BCC
   eval' alg Apply = alg.apply
   eval' alg (Curry f) = alg.curry (eval' alg f) 
   eval' alg (Uncurry f) = alg.uncurry (eval' alg f)  
+
+  IdrCat : Category Idr 
+  IdrCat = MkCat 
+    id 
+    (.) 
+    (\f, g, c => (f c, g c)) 
+    fst 
+    snd 
+    (\f, g, c => case c of 
+      Left l => f l 
+      Right r => g r) 
+    Left 
+    Right 
+    (uncurry apply) 
+    curry 
+    uncurry
+
 
 namespace Typed 
   data Ty : Type where
@@ -193,11 +210,11 @@ namespace Typed
     -- evaluator for objects
     ty : Ty -> obj
     -- evaluator for morphisms
-    id : {a: Ty} -> g (ty a) (ty a)
+    id : {a : Ty} -> g (ty a) (ty a)
     comp : {a, b, c : Ty} -> g (ty b) (ty c) -> g (ty a) (ty b) -> g (ty a) (ty c)
     prod : {a, b, c : Ty} -> g (ty c) (ty a) -> g (ty c) (ty b) -> g (ty c) (ty (a :*: b))
-    fst : {a, b: Ty} -> g (ty (a :*: b)) (ty a)
-    snd : {a, b :Ty} -> g (ty (a :*: b)) (ty b)
+    fst : {a, b : Ty} -> g (ty (a :*: b)) (ty a)
+    snd : {a, b : Ty} -> g (ty (a :*: b)) (ty b)
     coprod : {a, b, c : Ty} -> g (ty a) (ty c) -> g (ty b) (ty c) -> g (ty (a :+: b)) (ty c)
     left : {a, b : Ty} -> g (ty a) (ty (a :+: b))
     right : {a, b : Ty} -> g (ty b) (ty (a :+: b))
@@ -222,7 +239,3 @@ namespace Typed
   eval' alg Apply = alg.apply
   eval' alg (Curry f) = alg.curry (eval' alg f) 
   eval' alg (Uncurry f) = alg.uncurry (eval' alg f)  
-
-
-
-

@@ -23,7 +23,9 @@ code {
 .dark .sourceCode .kw { color: #268BD2; }
 
 /* DataTypeTok */
-.sourceCode .dt { color: #d5d09f; }
+.dark .sourceCode .dt { color: #d5d09f; }
+
+.sourceCode .dt { color: #000000; }
 
 /* DecValTok (decimal value), BaseNTok, FloatTok */
 .sourceCode .dv, .sourceCode .bn, .sourceCode .fl { color: #AE81FF; }
