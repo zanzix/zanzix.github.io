@@ -5,6 +5,7 @@ date: Aug 10, 2023
 tags: []
 description: Lets start the blog
 image: bibby.png
+preview: small-bibby.png
 ---
 
 ## Into the Bibby Zone 
