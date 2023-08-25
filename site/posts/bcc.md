@@ -3,7 +3,7 @@ title: "Lambda Calculus and Bicartesian Closed Categories, Part 1"
 author: Zanzi
 date: Aug 10, 2023
 tags: []
-description: Lets start the blog
+description: We will define a typed combinator syntax, and evaluate it in arbitrary BCCs 
 image: bibby.png
 preview: small-bibby.png
 ---
