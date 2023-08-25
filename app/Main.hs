@@ -33,6 +33,7 @@ siteMeta =
              , baseUrl = "https://zanzix.github.io"
              , siteTitle = "Some personal notes turned into a blog"
              , twitterHandle = Just "tangled_zans"
+             , mastodonHandle = Just "zanzi"
              , githubUser = Just "zanzix"
              }
 
@@ -52,6 +53,7 @@ data SiteMeta =
              , baseUrl       :: String -- e.g. https://example.ca
              , siteTitle     :: String
              , twitterHandle :: Maybe String -- Without @
+             , mastodonHandle :: Maybe String
              , githubUser    :: Maybe String
              }
     deriving (Generic, Eq, Ord, Show, ToJSON)

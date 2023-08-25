@@ -1,20 +1,73 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-    <title>Some personal notes turned into a blog</title>
-    <link href="https://zanzix.github.io/atom.xml" rel="self" type="application/rss+xml" />
-  <updated>2023-08-25T15:52:26Z</updated>
-  <author>
-      <name>Zanzi</name>
-  </author>
-  <id>https://zanzix.github.io/</id>
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:fb="http://ogp.me/ns/fb#">
+<head profile="http://www.w3.org/2005/10/profile">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6WEVP6B3NL"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-6WEVP6B3NL');
+    </script>    
+    <meta property="og:image" content="/images/small-bibby.png" />
+    <meta charset="UTF-8">
+    <meta name="description" content="Some personal notes turned into a blog">
+    <meta name="author" content="Zanzi">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@tangled_zans">
+<meta name="twitter:creator" content="@tangled_zans">
+<meta name="twitter:title" content="Lambda Calculus and Bicartesian Closed Categories, Part 1">
+    <meta name="twitter:description" content="Lets start the blog">
+    <meta name="twitter:image" content="https://zanzix.github.io/images/bibby.png">
+    <title>Lambda Calculus and Bicartesian Closed Categories, Part 1</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a id="beacon" href="/">
+                <div id="home-text"> HOME </div>
+            </a>
+        </nav>
+    
+        <div class="right-sidebar">
+    
+            <a class="ext-link" href="https://twitter.com/tangled_zans">
+            <img src="/images/twitter-logo.png" alt="Twitter Profile"/>
+        </a>
+        <a class="ext-link" rel="me" href="https://mathstodon.xyz/@zanzi">
+                <img src="/images/mastodon-logo.svg" alt="Mastodon Profile"/>
+              </a>        
+        <div id="theme-button">DAY</div>
+        </div>
+    </header>
 
-  <entry>
-      <title>Lambda Calculus and Bicartesian Closed Categories, Part 1</title>
-      <link href="https://zanzix.github.ioposts/bcc.html"/>
-      <id>https://zanzix.github.ioposts/bcc.html</id>
-      <updated>2023-08-10T00:00:00Z</updated>
-      <summary>Lets start the blog</summary>
-      <content type="html"><![CDATA[<h2 id="into-the-bibby-zone">Into the Bibby Zone</h2>
+<div id="page">
+    <div class="wrapper">
+        <div class="masthead">
+            <span class="title">
+                Lambda Calculus and Bicartesian Closed Categories, Part 1
+            </span>
+            <br>
+
+            <img class="post-image" src="/images/bibby.png">
+            <br>
+            <span class="byline">by Zanzi</span>
+            <br>
+            <span class="date">Aug 10, 2023</span>
+            <br>
+            <div class="metadata">
+            </div>
+            <div class="tags">
+            </div>
+        </div>
+    </div>
+    <article class="post">
+        <h2 id="into-the-bibby-zone">Into the Bibby Zone</h2>
 <p>As I've recently announced on Twitter, I'm starting a new blog series
 at the intersection of type theory, category theory, and functional
 programming.</p>
@@ -418,6 +471,30 @@ chosen category.</p>
 lambda calculus and translate it into our combinator language, thus
 showing how to interpret the STLC into an arbitrary bicartesian closed
 category. After that, we'll start in earnest, and introduce the main
-tool we'll be using throughout the series - recursion schemes.</p>]]></content>
-  </entry>
-</feed>
+tool we'll be using throughout the series - recursion schemes.</p>
+
+        <br>
+        <br>
+
+        <!--Share buttons-->
+        <div class="social-buttons">
+            <a href="https://twitter.com/share" class="twitter-share-button"
+                                                data-url="https://zanzix.github.io" data-text="Check out: Lambda Calculus and Bicartesian Closed Categories, Part 1 - " data-via="tangled_zans">Tweet</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <a href="https://twitter.com/tangled_zans" class="twitter-follow-button" data-show-count="false" data-dnt="true">Follow @tangled_zans</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
+        </div>
+</article>
+
+</div>
+
+<footer>
+    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+</footer>
+
+<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<script src="/js/main.js"></script>
+</body>
+</html>
