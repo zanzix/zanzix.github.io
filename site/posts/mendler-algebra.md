@@ -91,9 +91,7 @@ cata : {j : k -> Type} -> (j n -> c) -> Algebra (Lan j f) c -> Mu j f n -> c
 cata g alg = go where
 
 go : Mu j f n -> c
-
 go (Var a) = g a
-
 go (Bind $ MkLan continue action) = alg (MkLan (go . continue) action)
 ```
 
