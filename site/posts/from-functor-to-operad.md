@@ -13,7 +13,6 @@ First, lets introduce the fixpoint of an endofunctor
 
 ``` idris
 data Mu : (pattern : Type -> Type) -> Type where
-
 	In : {f: Type -> Type} -> f (Mu f) -> Mu f
 ```
 
@@ -37,7 +36,6 @@ and we define a catamorphism, or a fold, which uniformly evaluates any 'f' that'
 
 ``` idris
 cata : Functor f => Algebra f a -> Mu f -> a
-
 cata alg (In op) = alg (map (cata alg) op)
 ```
 
@@ -50,9 +48,7 @@ But it doesn't quite feel like universal algebra, since we don't have variables.
 
 ``` idris
 data Free : (pattern: (Type -> Type)) -> (var: Type) -> Type where
-
 	Var : var -> Free pat var
-
 	In : pat (Free pat var) -> Free pat var
 ```
 
@@ -85,13 +81,10 @@ and our evaluator takes an extra parameter, to know how to handle variables
 
 ```idris
 mcata : (a -> c) -> Algebra f c -> Free f a -> c
-
 mcata g alg = go where
 
 go : Free f a -> c
-
 go (Var a) = g a
-
 go (In $ fs) = alg $ (mcata g alg) fs
 ```
 
@@ -117,11 +110,8 @@ Since we're using dependent types, we can go a step further, and define well-sco
 
 ```idris
 data Operad : (Type -> Type) -> (Nat -> Type -> Type) where 
-
 Var : Fin n -> Operad f n a
-
 LetF : f (Operad f (S n) a) -> Operad f n a
-
 LetBind : f a -> Operad f (S n) a -> Operad f n a)
 ```
 TODO: might need to change it to Nat -> Type -> Type to be more regular?
@@ -142,13 +132,9 @@ Now our evaluator looks like this
 
 ``` idris
 mcata : (Fin n -> c) -> Algebra f c -> Operad f n -> c
-
 mcata g alg = go where
-
 go : Free f a -> c
-
 go (Var a) = g a
-
 go (In $ fs) = alg $ (mcata g alg) fs
 ```
 
