@@ -95,8 +95,8 @@ namespace BCC
   eval' : Category g -> FreeBCC g s t -> g s t  
   eval' alg (Prim f) = f 
   eval' alg Id  = alg.id 
-  eval' alg (Comp f g) = alg.comp (eval' alg f) (eval' alg g) 
-  eval' alg (ProdI f g) = alg.prod (eval' alg f) (eval' alg g) 
+  eval' alg (Comp f g) = alg.comp (eval' alg f) (eval' alg g)
+  eval' alg (ProdI f g) = alg.prod (eval' alg f) (eval' alg g)
   eval' alg Fst = alg.fst
   eval' alg Snd = alg.snd
   eval' alg (CoprodI f g) = alg.coprod (eval' alg f) (eval' alg g)
@@ -107,6 +107,7 @@ namespace BCC
   eval' alg (Uncurry f) = alg.uncurry (eval' alg f)  
 
 namespace Typed 
+  public export
   data Ty : Type where
     Unit : Ty
     Prod : Ty -> Ty -> Ty 
@@ -115,21 +116,25 @@ namespace Typed
     N : Ty
 
   infixr 5 ~>
+  public export
   (~>) : Ty -> Ty -> Ty
   (~>) = Exp
 
   infixr 5 :*: 
+  public export
   (:*:) : Ty -> Ty -> Ty
   (:*:) = Prod 
 
   infixr 5 :+: 
+  public export
   (:+:) : Ty -> Ty -> Ty 
   (:+:) = Sum 
 
   -- Free Bicartesian Closed Category over a typed graph
+  public export
   data TypedBCC : Graph Ty -> Graph Ty where
     -- Embedding a primitive is now a separate operations from 'Comp' 
-    Prim : k a b -> TypedBCC k a b 
+    Prim : {k : Graph Ty} -> k a b -> TypedBCC k a b 
     -- Identity arrow: a → a
     Id : {a : Ty} -> TypedBCC p a a 
     -- Composition of arrows: (b → c) → (a → b) → (a → c)
@@ -152,10 +157,15 @@ namespace Typed
     Curry : {a, b, c : Ty} -> TypedBCC k (a :*: b) c -> TypedBCC k a (b ~> c) 
     -- Uncurrying: (a → (b ⇨ c)) → (a * b → c) 
     Uncurry : {a, b, c : Ty} -> TypedBCC k a (b ~> c) -> TypedBCC k (a :*: b) c
-
+    -- Terminal morphism into Unit
+    Terminal : {a : Ty} -> TypedBCC k a Unit 
+    Swap : {a, b : Ty} -> TypedBCC k (a :*: b) (b :*: a) 
+    
+  public export
   data Prims : Ty -> Ty -> Type where
     E : Prims Unit N  
     Mult : Prims (Prod N N) N
+    Neg : Prims N N 
     
   -- We can define an evaluator like before. First we need to evaluate the types
   evalTy : Ty -> Type 
@@ -169,6 +179,7 @@ namespace Typed
   evalPrims : Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
   evalPrims E = \() => 0
   evalPrims Mult = uncurry (+)
+  evalPrims _ = ?x 
 
   -- Then we can evaluate the terms. we parametrise it by an interpreter for prim elements
   eval : TypedBCC Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
@@ -186,8 +197,11 @@ namespace Typed
   eval Apply = uncurry apply
   eval (Curry f) = curry $ eval f 
   eval (Uncurry f) = uncurry $ eval f  
+  eval Terminal = \_ => ()
+  eval _ = ?s
 
   -- But now we can also formualte this more generically, by translating into an arbitrary category. 
+  public export 
   record BCC {obj: Type} (g: Graph obj) where 
     constructor MkBCC 
     -- evaluator for objects
@@ -204,13 +218,16 @@ namespace Typed
     apply : {a, b : Ty} -> g (ty ((a ~> b) :*: a)) (ty b) 
     curry : {a, b, c : Ty} -> g (ty (a :*: b)) (ty c) -> g (ty a) (ty (b ~> c))
     uncurry : {a, b, c : Ty} -> g (ty a) (ty (b ~> c)) -> g (ty (a :*: b)) (ty c) 
+    terminal : {a : Ty} -> g (ty a) (ty Unit)
     -- evaluator for primitives
     e : g (ty Unit) (ty N)
     mult : g (ty (N :*: N)) (ty N)
 
+  public export 
   eval' : (b : BCC g) -> TypedBCC Prims ty1 ty2 -> g (b.ty ty1) (b.ty ty2) 
   eval' alg (Prim E) = alg.e  
   eval' alg (Prim Mult) = alg.mult 
+  eval' alg (Prim _) = ?zz
   eval' alg Id  = alg.id 
   eval' alg (Comp f g) = alg.comp (eval' alg f) (eval' alg g) 
   eval' alg (ProdI f g) = alg.prod (eval' alg f) (eval' alg g) 
@@ -222,7 +239,5 @@ namespace Typed
   eval' alg Apply = alg.apply
   eval' alg (Curry f) = alg.curry (eval' alg f) 
   eval' alg (Uncurry f) = alg.uncurry (eval' alg f)  
-
-
-
-
+  eval' alg Terminal = alg.terminal
+  eval' alg _ = ?xy
