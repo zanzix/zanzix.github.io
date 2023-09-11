@@ -132,35 +132,60 @@ namespace Typed
 
   -- Free Bicartesian Closed Category over a typed graph
   public export
-  data TypedBCC : Graph Ty -> Graph Ty where
+  data Comb : Graph Ty -> Graph Ty where
     -- Embedding a primitive is now a separate operations from 'Comp' 
-    Prim : {k : Graph Ty} -> k a b -> TypedBCC k a b 
+    Prim : {k : Graph Ty} -> k a b -> Comb k a b 
     -- Identity arrow: a → a
-    Id : {a : Ty} -> TypedBCC p a a 
+    Id : {a : Ty} -> {k : Graph Ty} -> Comb k a a 
     -- Composition of arrows: (b → c) → (a → b) → (a → c)
-    Comp : {a, b, c : Ty} -> TypedBCC k b c -> TypedBCC k a b -> TypedBCC k a c
+    Comp : {a, b, c : Ty} -> Comb k b c -> Comb k a b -> Comb k a c
     -- Product introduction: (a → b) → (a → c) → (a → (b * c))
-    ProdI : {a, b, c : Ty} -> TypedBCC k a b -> TypedBCC k a c -> TypedBCC k a (b :*: c) 
+    ProdI : {a, b, c : Ty} -> Comb k a b -> Comb k a c -> Comb k a (b :*: c) 
     -- First projection: (a * b) → a
-    Fst : {a, b : Ty} -> TypedBCC k (a :*: b) a
+    Fst : {a, b : Ty} -> Comb k (a :*: b) a
     -- Second projection: (a * b) → b
-    Snd : {a, b : Ty} -> TypedBCC k (a :*: b) b
+    Snd : {a, b : Ty} -> Comb k (a :*: b) b
     -- Coproduct introduction: (b → a) → (c → a) → (b + c → a)
-    CoprodI : {a, b, c : Ty} -> TypedBCC k b a -> TypedBCC k c a -> TypedBCC k (b :+: c) a 
+    CoprodI : {a, b, c : Ty} -> Comb k b a -> Comb k c a -> Comb k (b :+: c) a 
     -- Left injection: a → (a + b)
-    InL : {a, b : Ty} -> TypedBCC k a (a :+: b)
+    InL : {a, b : Ty} -> Comb k a (a :+: b)
     -- Right injection: b → (a + b)
-    InR : {a, b : Ty} -> TypedBCC k b (a :+: b)
+    InR : {a, b : Ty} -> Comb k b (a :+: b)
     -- Exponential elimination: 
-    Apply : {a, b : Ty} -> TypedBCC k ((a ~> b) :*: a) b
+    Apply : {a, b : Ty} -> Comb k ((a ~> b) :*: a) b
     -- Currying: (a * b → c) → (a → (b ⇨ c)) 
-    Curry : {a, b, c : Ty} -> TypedBCC k (a :*: b) c -> TypedBCC k a (b ~> c) 
+    Curry : {a, b, c : Ty} -> Comb k (a :*: b) c -> Comb k a (b ~> c) 
     -- Uncurrying: (a → (b ⇨ c)) → (a * b → c) 
-    Uncurry : {a, b, c : Ty} -> TypedBCC k a (b ~> c) -> TypedBCC k (a :*: b) c
+    Uncurry : {a, b, c : Ty} -> Comb k a (b ~> c) -> Comb k (a :*: b) c
     -- Terminal morphism into Unit
-    Terminal : {a : Ty} -> TypedBCC k a Unit 
-    Swap : {a, b : Ty} -> TypedBCC k (a :*: b) (b :*: a) 
-    
+    Terminal : {a : Ty} -> Comb k a Unit
+    -- Distributivity of sums over products
+    Distrib : {a, b, c : Ty} -> Comb k ((a :+: b) :*: c) ((a :*: c) :+: (b :*: c)) 
+    -- Bifunctor for products
+    BifP : {a, b, c, d : Ty} -> Comb k a c -> Comb k b d -> Comb k (a :*: b) (c :*: d)
+    -- Bifunctor for sums
+    BifC : {a, b, c, d : Ty} -> Comb k a c -> Comb k b d -> Comb k (a :+: b) (c :+: d)
+    -- Symmetry for products
+    SwapP : {a, b : Ty} -> Comb k (a :*: b) (b :*: a) 
+    -- Symmetry for sums
+    SwapC : {a, b : Ty} -> Comb k (a :+: b) (b :+: a) 
+    -- Unit elimination
+    UnitL : {a : Ty} -> Comb g (a :*: Unit) a
+    -- Copy: (a → a * a)
+    Copy : {a : Ty} -> Comb g a (a :*: a)
+    -- Cocopy: (a + a → a)
+    Cocopy : {a : Ty} -> Comb b (a :+: a) a 
+
+  infixr 5 <<<
+  public export 
+  (<<<) : {a, b, c : Ty} -> Comb k b c -> Comb k a b -> Comb k a c
+  (<<<) = Comp
+
+  infixr 5 >>>
+  public export 
+  (>>>) : {a, b, c : Ty} -> Comb k a b -> Comb k b c -> Comb k a c
+  (>>>) f g = Comp g f
+
   public export
   data Prims : Ty -> Ty -> Type where
     E : Prims Unit N  
@@ -182,7 +207,7 @@ namespace Typed
   evalPrims _ = ?x 
 
   -- Then we can evaluate the terms. we parametrise it by an interpreter for prim elements
-  eval : TypedBCC Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
+  eval : Comb Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
   eval (Prim f) = evalPrims f  
   eval Id = id
   eval (Comp f g) = (eval f) . (eval g) 
@@ -224,7 +249,7 @@ namespace Typed
     mult : g (ty (N :*: N)) (ty N)
 
   public export 
-  eval' : (b : BCC g) -> TypedBCC Prims ty1 ty2 -> g (b.ty ty1) (b.ty ty2) 
+  eval' : (b : BCC g) -> Comb Prims ty1 ty2 -> g (b.ty ty1) (b.ty ty2) 
   eval' alg (Prim E) = alg.e  
   eval' alg (Prim Mult) = alg.mult 
   eval' alg (Prim _) = ?zz
