@@ -16,24 +16,24 @@ namespace TypeCat
   -- Free category over Idris types and functions
   data Free : (g : Type -> Type -> Type) -> (a : Type) -> (b : Type) -> Type where 
     Id : Free g a a 
-    Comp : g b c -> Free g a b -> Free g a c 
+    Cons : g b c -> Free g a b -> Free g a c 
 
 namespace Cat
   -- A more general free category over some type of objects
   data Free : {obj : Type} -> Graph obj -> Graph obj where 
     Id : {a : obj} -> Free g a a 
-    Comp : {a, b, c : obj} -> g b c -> Free g a b -> Free g a c 
+    Cons : {a, b, c : obj} -> g b c -> Free g a b -> Free g a c 
 
   -- A basic evaluator
   eval : Free Idr a b -> Idr a b 
   eval Id = id 
-  eval (Comp f g) = f . (eval g)
+  eval (Cons f g) = f . (eval g)
 
   -- example term 
   ex1 : Free Idr Nat Nat 
-  ex1 = Comp (+1) Id
+  ex1 = Cons (+1) Id
 
-namespace BCC
+namespace BCC 
   -- Free Bicartesian Closed Category over Idris types and functions
   data FreeBCC : Graph Type -> Graph Type where
     -- Embedding a primitive is now a separate operations from 'Comp' 
@@ -80,11 +80,11 @@ namespace BCC
   
   record Category (g: Graph Type) where 
     constructor MkCat 
-    id : {a : Type} -> g a a 
+    id : {a: Type} -> g a a 
     comp : {a, b, c : Type} -> g b c -> g a b -> g a c
     prod : {a, b, c : Type} -> g c a -> g c b -> g c (a, b)
-    fst : {a, b : Type} -> g (a, b) a 
-    snd : {a, b : Type} -> g (a, b) b
+    fst : {a, b :Type} -> g (a, b) a 
+    snd : {a, b :Type} -> g (a, b) b
     coprod : {a, b, c : Type} -> g a c -> g b c -> g (Either a b) c
     left : {a, b : Type} -> g a (Either a b)
     right : {a, b : Type} -> g b (Either a b)
@@ -95,8 +95,8 @@ namespace BCC
   eval' : Category g -> FreeBCC g s t -> g s t  
   eval' alg (Prim f) = f 
   eval' alg Id  = alg.id 
-  eval' alg (Comp f g) = alg.comp (eval' alg f) (eval' alg g) 
-  eval' alg (ProdI f g) = alg.prod (eval' alg f) (eval' alg g) 
+  eval' alg (Comp f g) = alg.comp (eval' alg f) (eval' alg g)
+  eval' alg (ProdI f g) = alg.prod (eval' alg f) (eval' alg g)
   eval' alg Fst = alg.fst
   eval' alg Snd = alg.snd
   eval' alg (CoprodI f g) = alg.coprod (eval' alg f) (eval' alg g)
@@ -122,8 +122,8 @@ namespace BCC
     curry 
     uncurry
 
-
 namespace Typed 
+  public export
   data Ty : Type where
     Unit : Ty
     Prod : Ty -> Ty -> Ty 
@@ -132,49 +132,82 @@ namespace Typed
     N : Ty
 
   infixr 5 ~>
+  public export
   (~>) : Ty -> Ty -> Ty
   (~>) = Exp
 
   infixr 5 :*: 
+  public export
   (:*:) : Ty -> Ty -> Ty
   (:*:) = Prod 
 
   infixr 5 :+: 
+  public export
   (:+:) : Ty -> Ty -> Ty 
   (:+:) = Sum 
 
   -- Free Bicartesian Closed Category over a typed graph
-  data TypedBCC : Graph Ty -> Graph Ty where
-    -- Embedding a primitive is now a separate operations from 'Comp' 
-    Prim : k a b -> TypedBCC k a b 
+  public export
+  data Comb : Graph Ty -> Graph Ty where
+    -- Embedding a primitive is now a separate operation 
+    Prim : {k : Graph Ty} -> k a b -> Comb k a b 
     -- Identity arrow: a → a
-    Id : {a : Ty} -> TypedBCC p a a 
+    Id : {a : Ty} -> {k : Graph Ty} -> Comb k a a 
     -- Composition of arrows: (b → c) → (a → b) → (a → c)
-    Comp : {a, b, c : Ty} -> TypedBCC k b c -> TypedBCC k a b -> TypedBCC k a c
+    Comp : {a, b, c : Ty} -> Comb k b c -> Comb k a b -> Comb k a c
     -- Product introduction: (a → b) → (a → c) → (a → (b * c))
-    ProdI : {a, b, c : Ty} -> TypedBCC k a b -> TypedBCC k a c -> TypedBCC k a (b :*: c) 
+    ProdI : {a, b, c : Ty} -> Comb k a b -> Comb k a c -> Comb k a (b :*: c) 
     -- First projection: (a * b) → a
-    Fst : {a, b : Ty} -> TypedBCC k (a :*: b) a
+    Fst : {a, b : Ty} -> Comb k (a :*: b) a
     -- Second projection: (a * b) → b
-    Snd : {a, b : Ty} -> TypedBCC k (a :*: b) b
+    Snd : {a, b : Ty} -> Comb k (a :*: b) b
     -- Coproduct introduction: (b → a) → (c → a) → (b + c → a)
-    CoprodI : {a, b, c : Ty} -> TypedBCC k b a -> TypedBCC k c a -> TypedBCC k (b :+: c) a 
+    CoprodI : {a, b, c : Ty} -> Comb k b a -> Comb k c a -> Comb k (b :+: c) a 
     -- Left injection: a → (a + b)
-    InL : {a, b : Ty} -> TypedBCC k a (a :+: b)
+    InL : {a, b : Ty} -> Comb k a (a :+: b)
     -- Right injection: b → (a + b)
-    InR : {a, b : Ty} -> TypedBCC k b (a :+: b)
+    InR : {a, b : Ty} -> Comb k b (a :+: b)
     -- Exponential elimination: 
-    Apply : {a, b : Ty} -> TypedBCC k ((a ~> b) :*: a) b
+    Apply : {a, b : Ty} -> Comb k ((a ~> b) :*: a) b
     -- Currying: (a * b → c) → (a → (b ⇨ c)) 
-    Curry : {a, b, c : Ty} -> TypedBCC k (a :*: b) c -> TypedBCC k a (b ~> c) 
+    Curry : {a, b, c : Ty} -> Comb k (a :*: b) c -> Comb k a (b ~> c) 
     -- Uncurrying: (a → (b ⇨ c)) → (a * b → c) 
-    Uncurry : {a, b, c : Ty} -> TypedBCC k a (b ~> c) -> TypedBCC k (a :*: b) c
+    Uncurry : {a, b, c : Ty} -> Comb k a (b ~> c) -> Comb k (a :*: b) c
+    -- Terminal morphism into Unit
+    Terminal : {a : Ty} -> Comb k a Unit
+    -- Distributivity of sums over products
+    Distrib : {a, b, c : Ty} -> Comb k ((a :+: b) :*: c) ((a :*: c) :+: (b :*: c)) 
+    -- Bifunctor for products
+    BifP : {a, b, c, d : Ty} -> Comb k a c -> Comb k b d -> Comb k (a :*: b) (c :*: d)
+    -- Bifunctor for sums
+    BifC : {a, b, c, d : Ty} -> Comb k a c -> Comb k b d -> Comb k (a :+: b) (c :+: d)
+    -- Symmetry for products
+    SwapP : {a, b : Ty} -> Comb k (a :*: b) (b :*: a) 
+    -- Symmetry for sums
+    SwapC : {a, b : Ty} -> Comb k (a :+: b) (b :+: a) 
+    -- Unit elimination
+    UnitL : {a : Ty} -> Comb g (a :*: Unit) a
+    -- Copy: (a → a * a)
+    Copy : {a : Ty} -> Comb g a (a :*: a)
+    -- Cocopy: (a + a → a)
+    Cocopy : {a : Ty} -> Comb b (a :+: a) a 
 
+  infixr 5 <<<
+  (<<<) : {a, b, c : Ty} -> Comb k b c -> Comb k a b -> Comb k a c
+  (<<<) = Comp
+
+  infixr 5 >>>
+  public export 
+  (>>>) : {a, b, c : Ty} -> Comb k a b -> Comb k b c -> Comb k a c
+  (>>>) f g = Comp g f
+
+  public export
   data Prims : Ty -> Ty -> Type where
-    E : Prims Unit N  
+    Z : Prims Unit N  
     Mult : Prims (Prod N N) N
     
   -- We can define an evaluator like before. First we need to evaluate the types
+  public export
   evalTy : Ty -> Type 
   evalTy Unit = Unit
   evalTy N = Nat
@@ -184,11 +217,11 @@ namespace Typed
 
   -- we'll need an evaluator for primitive elements. Let's use a monoid of natural numbers
   evalPrims : Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
-  evalPrims E = \() => 0
+  evalPrims Z = \() => 0
   evalPrims Mult = uncurry (+)
 
   -- Then we can evaluate the terms. we parametrise it by an interpreter for prim elements
-  eval : TypedBCC Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
+  eval : Comb Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
   eval (Prim f) = evalPrims f  
   eval Id = id
   eval (Comp f g) = (eval f) . (eval g) 
@@ -203,30 +236,35 @@ namespace Typed
   eval Apply = uncurry apply
   eval (Curry f) = curry $ eval f 
   eval (Uncurry f) = uncurry $ eval f  
+  eval Terminal = \_ => ()
+  eval _ = ?s
 
   -- But now we can also formualte this more generically, by translating into an arbitrary category. 
+  public export 
   record BCC {obj: Type} (g: Graph obj) where 
     constructor MkBCC 
     -- evaluator for objects
     ty : Ty -> obj
     -- evaluator for morphisms
-    id : {a : Ty} -> g (ty a) (ty a)
+    id : {a: Ty} -> g (ty a) (ty a)
     comp : {a, b, c : Ty} -> g (ty b) (ty c) -> g (ty a) (ty b) -> g (ty a) (ty c)
     prod : {a, b, c : Ty} -> g (ty c) (ty a) -> g (ty c) (ty b) -> g (ty c) (ty (a :*: b))
-    fst : {a, b : Ty} -> g (ty (a :*: b)) (ty a)
-    snd : {a, b : Ty} -> g (ty (a :*: b)) (ty b)
+    fst : {a, b: Ty} -> g (ty (a :*: b)) (ty a)
+    snd : {a, b :Ty} -> g (ty (a :*: b)) (ty b)
     coprod : {a, b, c : Ty} -> g (ty a) (ty c) -> g (ty b) (ty c) -> g (ty (a :+: b)) (ty c)
     left : {a, b : Ty} -> g (ty a) (ty (a :+: b))
     right : {a, b : Ty} -> g (ty b) (ty (a :+: b))
     apply : {a, b : Ty} -> g (ty ((a ~> b) :*: a)) (ty b) 
     curry : {a, b, c : Ty} -> g (ty (a :*: b)) (ty c) -> g (ty a) (ty (b ~> c))
     uncurry : {a, b, c : Ty} -> g (ty a) (ty (b ~> c)) -> g (ty (a :*: b)) (ty c) 
+    terminal : {a : Ty} -> g (ty a) (ty Unit)
     -- evaluator for primitives
     e : g (ty Unit) (ty N)
     mult : g (ty (N :*: N)) (ty N)
 
-  eval' : (b : BCC g) -> TypedBCC Prims ty1 ty2 -> g (b.ty ty1) (b.ty ty2) 
-  eval' alg (Prim E) = alg.e  
+  public export 
+  eval' : (b : BCC g) -> Comb Prims ty1 ty2 -> g (b.ty ty1) (b.ty ty2) 
+  eval' alg (Prim Z) = alg.e  
   eval' alg (Prim Mult) = alg.mult 
   eval' alg Id  = alg.id 
   eval' alg (Comp f g) = alg.comp (eval' alg f) (eval' alg g) 
@@ -239,3 +277,5 @@ namespace Typed
   eval' alg Apply = alg.apply
   eval' alg (Curry f) = alg.curry (eval' alg f) 
   eval' alg (Uncurry f) = alg.uncurry (eval' alg f)  
+  eval' alg Terminal = alg.terminal
+  eval' alg _ = ?xy

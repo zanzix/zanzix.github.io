@@ -3,9 +3,8 @@ title: "Lambda Calculus and Bicartesian Closed Categories, Part 1"
 author: Zanzi
 date: Aug 10, 2023
 tags: []
-description: We will define a typed combinator syntax, and evaluate it in arbitrary BCCs 
+description: Lets start the blog
 image: bibby.png
-preview: small-bibby.png
 ---
 
 ## Into the Bibby Zone 
@@ -31,13 +30,14 @@ To start, let's retrace some familiar ground and look at a typed combinator lang
 
 These first two blog posts are meant as a high level introduction to the basic tools and methodology that we'll be using through the series, and we will revisit these ideas step-by-step in subsequent posts.
 
+You can find the full code for this post [here](https://github.com/zanzix/zanzix.github.io/tree/main/site/code).
 
-We'll start with a [typical representation of free categories in Haskell](https://hackage.haskell.org/package/free-category-0.0.1.0/docs/Control-Category-Free.html) - a free category over functions. You can find the full code for this post [here](https://github.com/zanzix/zanzix.github.io/tree/main/site/code)
+We'll start with a [typical representation of free categories in Haskell](https://hackage.haskell.org/package/free-category-0.0.1.0/docs/Control-Category-Free.html) - a free category over functions. 
 
 ```idr 
-data Free : (g : Type -> Type -> Type) -> Type -> Type -> Type where
-  Id : Free g a a 
-  Comp : g b c -> Free g a b -> Free g a c 
+data Path : (g : Type -> Type -> Type) -> Type -> Type -> Type where
+  Id : Path g a a 
+  Cons : g b c -> Path g a b -> Path g a c 
 
 ```
 The first parameter 'g' corresponds to some type of Idris functions. 'a' and 'b' then correspond to the source and target types of the function, Id is the identity function, and Comp is a formal composite of functions.  
@@ -53,7 +53,6 @@ But we can also instantiate it with various useful categories from functional pr
 ```idr
 Kleisli : (Type -> Type) -> Type -> Type -> Type 
 Kleisli m a b = a -> m b 
-
 ```
 
 This representation isn't as general as it could be, though. 
@@ -69,9 +68,9 @@ Graph obj = obj -> obj -> Type
 The definition of a free category stays the same, but our type becomes more informative
 
 ```idr
-data Free : {obj : Type} -> Graph obj -> Graph obj where 
-  Id : {a : obj} -> Free g a a 
-  Comp : {a, b, c : obj} -> g b c -> Free g a b -> Free g a c 
+data Path : {obj : Type} -> Graph obj -> Graph obj where 
+  Id : {a : obj} -> Path g a a 
+  Cons : {a, b, c : obj} -> g b c -> Path g a b -> Path g a c 
 ```
 
 A term of a free category is nothing other than a path constructed from composing individual edges of a graph. 
@@ -89,9 +88,9 @@ Which motivates the idea that a category is a typed monoid.
 The evaluator for a free category is very similar to a fold for a list, except that we replace each edge with a function rather than an element. 
 
 ```idr
-eval : Free Idr a b -> Idr a b 
+eval : Path Idr a b -> Idr a b 
 eval Id = id 
-eval (Comp f g) = f . (eval g)
+eval (Cons f g) = f . (eval g)
 ``` 
 
 ### The Free Bicartesian Closed Category over Types
@@ -101,7 +100,7 @@ We can then define a free bicartesian category over types as
 
 ```idr
 data FreeBCC : Graph Type -> Graph Type where
-  -- Embedding a primitive is now a separate operation from 'Comp' 
+  -- Embedding a primitive is now a separate operation 
   Prim : k a b -> FreeBCC k a b
   -- Identity arrow: a → a
   Id : {a : Type} -> FreeBCC p a a 
@@ -191,21 +190,21 @@ Our new evaluator simply matches each construct with the corresponding record. W
 As an example, let's create a record that packages up our earlier definition of the category of Idris functions.
 
 ```idr
-IdrCat : Category Idr 
-IdrCat = MkCat 
-  id 
-  (.) 
-  (\f, g, c => (f c, g c)) 
-  fst 
-  snd 
-  (\f, g, c => case c of 
-    Left l => f l 
-    Right r => g r) 
-  Left 
-  Right 
-  (uncurry apply) 
-  curry 
-  uncurry
+  IdrCat : Category Idr 
+  IdrCat = MkCat 
+    id 
+    (.) 
+    (\f, g, c => (f c, g c)) 
+    fst 
+    snd 
+    (\f, g, c => case c of 
+      Left l => f l 
+      Right r => g r) 
+    Left 
+    Right 
+    (uncurry apply) 
+    curry 
+    uncurry
 ```
 
 We could also instantiate our record with a few choices of categories, such as 
@@ -227,7 +226,6 @@ Freyd g a b = g a b
 More on this later! 
 
 In general, it's rare that any of these constructions preserve all of our underlying structure (products, coproducts, exponentials), but we can always mix and match the syntax as needed. 
-
 
 ### Free Bicartesian Categories in General
 Finally, let's step away from the category of Idris types and define a free bicartesian closed category in general. 
@@ -375,7 +373,7 @@ record BCC {obj: Type} (g: Graph obj) where
 
 We've also included an evaluator for our primitives, in this case the multiplication and unit of a monoid. 
 
-Our final evaluator is then 
+Our final evaluator is then: 
 
 ```idr
 eval' : (bcc : BCC g) -> TypedBCC Prims ty1 ty2 -> g (bcc.ty ty1) (bcc.ty ty2) 
