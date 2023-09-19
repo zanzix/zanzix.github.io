@@ -94,6 +94,7 @@ eval (Cons f g) = f . (eval g)
 ``` 
 
 ### The Free Bicartesian Closed Category over Types
+
 We will now go from a free category to a free category with products, coproducts, and exponentials. For readers new to category theory, we will go through each of these properties in more granular detail in subsequent blog posts. But for now we will define them all in one go. 
 
 We can then define a free bicartesian category over types as 
@@ -190,21 +191,21 @@ Our new evaluator simply matches each construct with the corresponding record. W
 As an example, let's create a record that packages up our earlier definition of the category of Idris functions.
 
 ```idr
-  IdrCat : Category Idr 
-  IdrCat = MkCat 
-    id 
-    (.) 
-    (\f, g, c => (f c, g c)) 
-    fst 
-    snd 
-    (\f, g, c => case c of 
-      Left l => f l 
-      Right r => g r) 
-    Left 
-    Right 
-    (uncurry apply) 
-    curry 
-    uncurry
+IdrCat : Category Idr 
+IdrCat = MkCat 
+  id 
+  (.) 
+  (\f, g, c => (f c, g c)) 
+  fst 
+  snd 
+  (\f, g, c => case c of 
+    Left l => f l 
+    Right r => g r) 
+  Left 
+  Right 
+  (uncurry apply) 
+  curry 
+  uncurry
 ```
 
 We could also instantiate our record with a few choices of categories, such as 
@@ -260,40 +261,40 @@ infixr 5 :+:
 Defining the free BCC is just as before, but whereas we previously defined it over functions of inbuilt types, we now define it over a graph of our new type universe Ty.
 
 ```idr
-data TypedBCC : Graph Ty -> Graph Ty where
+data Comb : Graph Ty -> Graph Ty where
   -- Primitives
-  Prim : k a b -> TypedBCC k a b 
+  Prim : k a b -> Comb k a b 
   -- Identity arrow: a → a
-  Id : {a : Ty} -> TypedBCC p a a 
+  Id : {a : Ty} -> Comb p a a 
   -- Composition of arrows: (b → c) → (a → b) → (a → c)
-  Comp : {a, b, c : Ty} -> TypedBCC k b c -> TypedBCC k a b -> TypedBCC k a c
+  Comp : {a, b, c : Ty} -> Comb k b c -> Comb k a b -> Comb k a c
   -- Product introduction: (a → b) → (a → c) → (a → (b * c))
-  ProdI : {a, b, c : Ty} -> TypedBCC k a b -> TypedBCC k a c 
-    -> TypedBCC k a (b :*: c) 
+  ProdI : {a, b, c : Ty} -> Comb k a b -> Comb k a c 
+    -> Comb k a (b :*: c) 
   -- First projection: (a * b) → a
-  Fst : {a, b : Ty} -> TypedBCC k (a :*: b) a
+  Fst : {a, b : Ty} -> Comb k (a :*: b) a
   -- Second projection: (a * b) → b
-  Snd : {a, b : Ty} -> TypedBCC k (a :*: b) b
+  Snd : {a, b : Ty} -> Comb k (a :*: b) b
   -- Coproduct introduction: (b → a) → (c → a) → (b + c → a)
-  CoprodI : {a, b, c : Ty} -> TypedBCC k b a -> TypedBCC k c a 
-    -> TypedBCC k (b :+: c) a 
+  CoprodI : {a, b, c : Ty} -> Comb k b a -> Comb k c a 
+    -> Comb k (b :+: c) a 
   -- Left injection: a → (a + b)
-  InL : {a, b : Ty} -> TypedBCC k a (a :+: b)
+  InL : {a, b : Ty} -> Comb k a (a :+: b)
   -- Right injection: b → (a + b)
-  InR : {a, b : Ty} -> TypedBCC k b (a :+: b)
+  InR : {a, b : Ty} -> Comb k b (a :+: b)
   -- Exponential elimination: 
-  Apply : {a, b : Ty} -> TypedBCC k ((a ~> b) :*: a) b
+  Apply : {a, b : Ty} -> Comb k ((a ~> b) :*: a) b
   -- Currying: (a * b → c) → (a → (b ⇨ c)) 
-  Curry : {a, b, c : Ty} -> TypedBCC k (a :*: b) c -> TypedBCC k a (b ~> c) 
+  Curry : {a, b, c : Ty} -> Comb k (a :*: b) c -> Comb k a (b ~> c) 
   -- Uncurrying: (a → (b ⇨ c)) → (a * b → c) 
-  Uncurry : {a, b, c : Ty} -> TypedBCC k a (b ~> c) -> TypedBCC k (a :*: b) c
+  Uncurry : {a, b, c : Ty} -> Comb k a (b ~> c) -> Comb k (a :*: b) c
 ```
 The main difference from before is that our primitives are no longer a simple embedding of Idris functions. Now we need a separate type for representing them. As an example, let's use the generators of a monoid over some base type:
 
 ```idr 
 data Prim : Ty -> Ty -> Type where
   -- Unit
-  E : Prim Unit Base 
+  Z : Prim Unit Base 
   -- Multiplication
   Mult : (Prod Base Base) Base
 ```
@@ -316,14 +317,14 @@ We can then define an evaluator. We'll start by interpreting in Idris functions,
 
 ```idr
 evalPrims : Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
-evalPrims E = \() => 0
+evalPrims Z = \() => 0
 evalPrims Mult = uncurry (+)
 ```
 
 Then we'll write out interpreter for the rest of terms. We could have parametrised our eval function by evalPrims, but for now we'll keep things simple. 
 
 ```idr
-eval : TypedBCC Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
+eval : Comb Prims ty1 ty2 -> Idr (evalTy ty1) (evalTy ty2)
 eval (Prim f) = evalPrims f  
 eval Id = id
 eval (Comp f g) = (eval f) . (eval g) 
@@ -342,7 +343,7 @@ eval (Uncurry f) = uncurry $ eval f
 
 The main thing that's changed is that now instead of evaluating into Idris functions directly, we must first evaluate our source and target types. Thanks to the magic of dependent types, our compiler knows what the types of our evaluated combinators should be, so it's really hard to make a mistake here. This is something that will become invaluable once we start working with languages with more interesting notions of variable context.
 
-Once again we would like to generalise from evaluating our combinators into the category of Idris types to evaluating into morphisms of an arbitrary category. Our types are now evaluated into objects ``` ty : Ty -> obj ``` and our combinators are evaluated into morphisms, whose source and target are calculated by first evaluating the objects ```TypedBCC _ ty1 ty2 -> c (ty s) (ty t)```
+Once again we would like to generalise from evaluating our combinators into the category of Idris types to evaluating into morphisms of an arbitrary category. Our types are now evaluated into objects ``` ty : Ty -> obj ``` and our combinators are evaluated into morphisms, whose source and target are calculated by first evaluating the objects ```Comb _ ty1 ty2 -> c (ty s) (ty t)```
 
 We'll package up the evaluator for objects in a more modular way later, but for now let's just stick the entire thing into our definition of a BCC:
 
@@ -376,8 +377,8 @@ We've also included an evaluator for our primitives, in this case the multiplica
 Our final evaluator is then: 
 
 ```idr
-eval' : (bcc : BCC g) -> TypedBCC Prims ty1 ty2 -> g (bcc.ty ty1) (bcc.ty ty2) 
-eval' alg (Prim E) = alg.e  
+eval' : (bcc : BCC g) -> Comb Prims ty1 ty2 -> g (bcc.ty ty1) (bcc.ty ty2) 
+eval' alg (Prim Z) = alg.e  
 eval' alg (Prim Mult) = alg.mult 
 eval' alg Id  = alg.id 
 eval' alg (Comp f g) = alg.comp (eval' alg f) (eval' alg g) 
