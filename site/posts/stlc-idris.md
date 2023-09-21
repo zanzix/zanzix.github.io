@@ -6,12 +6,15 @@ tags: []
 description: Converting the simply typed lambda calculus into typed combinators
 ---
 
-TODO: explain motivation for this in beginning
+## Introduction 
 
 In the [previous post](/posts/bcc) we've defined a typed combinator language for bicartesian closed categories. In this post, we will define the Simply Typed Lambda Calculus and translate it into our combinator language.
 
 The reason why we'd want to do this is that while combinators allow us to work with the primitives of some categorical structure, they make for a very austere programming language - one with no variables or binding. So while it's possible to program entirely in combinators, we would be limiting ourselves to writing point-free programs. Instead, we will write our programs in the STLC and compile the code into combinators.
 
+But while the translation from lambda terms to closed cartesian categories is standard, there is a slight impedance mismatch between variable contexts and products that we will encounter again and again. So in addition to showing the translation itself, the goal of this blog post is to start introducing the idea of categories with a first-class notion of context, aka multicategories.
+
+## Types
 Just as before, we start by defining a type for our STLC types, as well as infix type synonyms for each type constructor.
 
 ```idr
@@ -39,6 +42,7 @@ As we can see, the types stay the same as before. In fact, looking at the STLC a
 
 Let's start by looking at the core language, and then add the rest of the constructors. 
 
+## Core language
 ```idr 
 -- Terms of the Simply Typed Lambda Calculus
 data Term : List Ty -> Ty -> Type where
@@ -61,25 +65,24 @@ Graph obj = obj -> obj -> Type
 Multigraph : Type -> Type 
 Multigraph obj = List obj -> obj -> Type 
 ```
-
 Since we now have a list of inputs as opposed to a single input, we need some way of embedding variables into our variable context. This is done using the ```Var``` constructor. It kind of looks like the identity arrow from the combinator language if you squint, and indeed the correspondence would become a lot more precise if we were working with a linear lambda calculus:
 
 ```idr
 Id   : {a : Ty}                              -> Comb _ a  a 
-Var  : {a : Ty} -> {g : List Ty} -> Elem a g -> Term   g  a
 LVar : {a : Ty}                              -> Term  [a] a
+Var  : {a : Ty} -> {g : List Ty} -> Elem a g -> Term   g  a
 ```
 
 So ```Id``` takes a single input to a single output, ```Var``` embeds a variable into a larger context, while ```LVar``` embeds the variable into a singleton context. From this we can see the difference between linear and cartesian variables - cartesian variables can be projected out of a larger context, ignoring the rest, while linear variables must be used without anything else remaining.
 
-Here ```Elem``` is a kind of proof-relevant membership relation, which guarantees that the variable ```a``` will be inside of the larger context ```g```. 
+Here ```Elem```[https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html] is taken from the Idris standard library, it's kind of proof-relevant membership relation, which guarantees that the variable ```a``` will be inside of the larger context ```g```. 
 
 ```idr
 data Elem : a -> List a -> Type where
-     ||| A proof that the element is at the head of the list
-     Here : Elem x (x :: xs)
-     ||| A proof that the element is in the tail of the list
-     There : Elem x xs -> Elem x (y :: xs)
+  ||| A proof that the element is at the head of the list
+  Here : Elem x (x :: xs)
+  ||| A proof that the element is in the tail of the list
+  There : Elem x xs -> Elem x (y :: xs)
 
 -- Find the variable corresponding to Elem t g, from an environment Env g
 lookup : Elem t g -> Env g -> evalTy t
@@ -87,7 +90,6 @@ lookup Here (x ::- xs) = x
 lookup (There t) (y ::- xs) = lookup t xs 
 
 ```
-
 We can also see that lambda abstraction looks kind of like currying, but flipped. If we were to work with Snoc-lists instead of Cons-lists then we would see the correspondence between the two constructors a lot clearer:
 
 ```idr
@@ -106,6 +108,16 @@ We can see that the two line-up very closely, except that Curry takes as an inpu
 
 Unfortunately, while the Snoc-list representation makes working with lambda abstraction much easier, it will complicate working with the rest of our binding operators, so we will not be using it in the full language. 
 
+We've also split Apply into multiple terms. Whereas previously the entire operation was expressed as a single combinator, we are now defining it as a meta-operation on terms, each with their own context:
+
+```idr
+App   : Term   g  (a ~> b) -> Term g a -> Term g b
+Apply : Comb _   ((a ~> b) :*:       a)          b
+```
+
+This will be a recurring pattern in the translation, and many other combinators will be split this way. 
+
+## Primitives
 We can also see that just as we've changed the type of our term language to be a multigraph, we've done the same to our primitives ```Prims : List Ty -> Ty -> Type```. Similar to Lam, each primitive will take a number of variables from the context and bind them to a primitive expression. 
 
 Let's define some primitives. Just like before, we'd like to work with the generators of a monoid. There are a few choices of representation that we can take here, depending on how we want our primitives to interact with the context. 
@@ -154,13 +166,6 @@ data STLC : List Ty -> Ty -> Type where
 But this would not maintain the clean separation between the primitives and the terms built on top of them, like we did in our combinator language. 
 
 Our presentation also gives us an insight into a more subtle relationship between lambda terms and combinators - combinators are defined over an underlying graph, while terms are defined over an underlying multigraph.  
-
-The last thing that's changed is that we've split Apply into multiple terms. Whereas previously the entire operation was expressed as a single combinator, we are now defining it as a meta-operation on terms, each with their own context:
-
-```idr
-App   : Term g (a ~> b) -> Term g a -> Term g b
-Apply : Comb _ ((a ~> b) :*: a) b
-```
 
 ## STLC with Products and Sums
 
@@ -471,43 +476,10 @@ interp b t = eval' b (sem t)
 
 ## Conclusion
 
-We have formulated a translation from the STLC into an arbitrary BCC. This was mostly painless, except for when it came to translating constructors that involve context manipulation. Writing this blog post has certainly fallen victim to the 80:20 rule, most of it was easy sailing except for the fiddly context translations that took a most of the time to get right. 
+We have formulated a translation from the STLC into an arbitrary BCC. This was *mostly* painless, except for when it came to translating constructors that involve context manipulation. Even writing this blog post has fallen to the 80:20 rule, with the majority of the code being straightforward except for the parts involving shuffling variables and binders. 
 
-It's worth reflecting on whether this sort of translation is how we really want to go about our semantics. In this blog series we will meet many different contexts - linear contexts corresponding to monoidal categories, mixed contexs corresponding to several categories with an adjunction, graded contexts corresponding to graded (multi)-categories. Our goal is to formulate tools that will let us work with all of these structures uniformly, not get bogged down by brittle combinator shuffling. 
+It's worth reflecting on *why* this is so difficult. Categories don't have a first-class notion of variable context or binding operations, so when we're translating from a calculus that does, we need some way of turning binders and variables into morphisms. Doing so, however, makes our semantics more awkward and verbose, and can lead to an explosion of code size. 
 
-So if we don't want to work with combinators, what is the alternative? 
+But what if there was another way? What if instead of translating into categorical combinators, we had a way of giving a semantics for the lambda calculus directly in terms of multicategories? Rather than dealing with the impedance mismatch between contexts and products, our semantics would be a homomorphism on the context, preserving its structure. 
 
-The hint is in the types:
-
-In the previous post we parametrised our Comb language with its type of primitives: 
-
-```idr 
-data Comb : Graph Ty -> Graph Ty
-```
-
-We can of course notice the similarity with the type of free categories:
-
-```idr
-data Path : Graph Ty -> Graph Ty
-```
-
-From this we can see that bicartesian closed categories, just like ordinary categories, can be seen as free structures over some underlying graph. We will make this precise in the following posts, and show how to formulate categories as f-algebras of functors over graphs.
-
-Meanwhile we've hardcoded our lambda calculus primitives, but let's see what happens if we refactor things a bit and extract them: 
-
-```idr
-data Term : Multigraph Ty -> Multigraph Ty
-```
-
-This gives us a hint for a much more direct semantics of lambda terms, once we notice the similarity to another datatype we've seen before: 
-
-```idr
-data Multicat : Multigraph Ty -> Multigraph Ty
-``` 
-TODO: Wording?
-
-So just as categories can be expressed as f-algebras over graphs, typed lambda terms and multicategories can be expressed as f-algebra over multigraphs.
-
-From this we could ask: what if instead of translating our language into combinators, we could work with multicategories directly? This would have the advantage of keeping variable and context data first-class, rather than translating them into a semantics where they are encoded indirectly. 
-
-If this sounds daunting, don't worry, we will start from the basics. In the next post we will introduce a simplified form of multicategory called an operad, and relate it to the more familiar notions of fixpoint and free monad over an endofunctor. 
+This is what we will look at in the next few blog posts, and what will become one of the main themes of the series. And if the idea of working with multicategories sounds daunting, then don't worry, the next blog post will start at the very beginning - with fixpoints of functors and free monads. 
