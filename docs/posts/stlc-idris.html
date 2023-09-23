@@ -153,7 +153,7 @@ this we can see the difference between linear and cartesian variables -
 cartesian variables can be projected out of a larger context, ignoring
 the rest, while linear variables must be used without anything else
 remaining.</p>
-<p>Here <code>Elem</code>[<a
+<p>Here (Elem)[<a
 href="https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html"
 class="uri">https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html</a>]
 is taken from the Idris standard library, it's kind of proof-relevant
@@ -489,7 +489,7 @@ environment, pointing at a specific value. When working with tuples, a
 variable is translated into a sequence of projections from a nested
 tuple.</p>
 <div class="sourceCode" id="cb29"><pre
-class="sourceCode idr"><code class="sourceCode idris"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">Graph</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ctx<span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ty <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> </span>
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">Graph</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ctx <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ty <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> </span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Elem</span> ty ctx <span class="ot">-&gt;</span> <span class="dt">Comb</span> g (ctxF ctx) ty</span>
 <span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>var <span class="dt">Here</span> <span class="fu">=</span> <span class="dt">Fst</span> </span>
 <span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>var (<span class="dt">There</span> t) <span class="fu">=</span> <span class="dt">Comp</span> (var t) <span class="dt">Snd</span></span></code></pre></div>
@@ -549,7 +549,7 @@ class="sourceCode idr"><code class="sourceCode idris"><span id="cb33-1"><a href=
 following:</p>
 <div class="sourceCode" id="cb34"><pre
 class="sourceCode idr"><code class="sourceCode idris"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Translation into combinators</span></span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sem</span> <span class="ot">:</span> {ctx<span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ty <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> ctx ty <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="dt">Prims</span> (ctxF ctx) ty</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sem</span> <span class="ot">:</span> {ctx <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ty <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> ctx ty <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="dt">Prims</span> (ctxF ctx) ty</span>
 <span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Var</span> v) <span class="fu">=</span> var v</span>
 <span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">LPrim</span> e) <span class="fu">=</span> evalPrimF e</span>
 <span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Pair</span> t1 t2) <span class="fu">=</span> <span class="dt">ProdI</span> (sem t1) (sem t2)</span>
@@ -574,9 +574,9 @@ class="sourceCode idr"><code class="sourceCode idris"><span id="cb35-1"><a href=
 <p>We have formulated a translation from the STLC into an arbitrary BCC.
 This was <em>mostly</em> painless, except for when it came to
 translating constructors that involve context manipulation. Even writing
-this blog post has fallen to the 80:20 rule, with the majority of the
-code being straightforward except for the parts involving shuffling
-variables and binders.</p>
+this blog post has fallen to the <del>80:20</del> <del>90:10</del> 95:5
+rule, with the majority of the code being straightforward except for the
+parts involving shuffling variables and binders.</p>
 <p>It's worth reflecting on <em>why</em> this is so difficult.
 Categories don't have a first-class notion of variable context or
 binding operations, so when we're translating from a calculus that does,

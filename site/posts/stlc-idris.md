@@ -75,7 +75,7 @@ Var  : {a : Ty} -> {g : List Ty} -> Elem a g -> Term   g  a
 
 So ```Id``` takes a single input to a single output, ```Var``` embeds a variable into a larger context, while ```LVar``` embeds the variable into a singleton context. From this we can see the difference between linear and cartesian variables - cartesian variables can be projected out of a larger context, ignoring the rest, while linear variables must be used without anything else remaining.
 
-Here ```Elem```[https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html] is taken from the Idris standard library, it's kind of proof-relevant membership relation, which guarantees that the variable ```a``` will be inside of the larger context ```g```. 
+Here (Elem)[https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html] is taken from the Idris standard library, it's kind of proof-relevant membership relation, which guarantees that the variable ```a``` will be inside of the larger context ```g```. 
 
 ```idr
 data Elem : a -> List a -> Type where
@@ -386,7 +386,7 @@ evalPrim' CMult = BifP Id Fst >>> Prim Typed.Mult
 In addition to translating the primitives, we also want to translate variables. When working with contexts, a variable is an index into an environment, pointing at a specific value. When working with tuples, a variable is translated into a sequence of projections from a nested tuple. 
 
 ```idr
-var : {g : Graph Ty} -> {ctx: List Ty} -> {ty : Ty} -> 
+var : {g : Graph Ty} -> {ctx : List Ty} -> {ty : Ty} -> 
   Elem ty ctx -> Comb g (ctxF ctx) ty
 var Here = Fst 
 var (There t) = Comp (var t) Snd
@@ -449,7 +449,7 @@ Putting it all together, our compiler to combinators becomes the following:
 
 ```idr
 -- Translation into combinators
-sem : {ctx: List Ty} -> {ty : Ty} -> Term ctx ty -> Comb Prims (ctxF ctx) ty
+sem : {ctx : List Ty} -> {ty : Ty} -> Term ctx ty -> Comb Prims (ctxF ctx) ty
 sem (Var v) = var v
 sem (LPrim e) = evalPrimF e
 sem (Pair t1 t2) = ProdI (sem t1) (sem t2)
@@ -476,7 +476,7 @@ interp b t = eval' b (sem t)
 
 ## Conclusion
 
-We have formulated a translation from the STLC into an arbitrary BCC. This was *mostly* painless, except for when it came to translating constructors that involve context manipulation. Even writing this blog post has fallen to the 80:20 rule, with the majority of the code being straightforward except for the parts involving shuffling variables and binders. 
+We have formulated a translation from the STLC into an arbitrary BCC. This was *mostly* painless, except for when it came to translating constructors that involve context manipulation. Even writing this blog post has fallen to the ~~80:20~~ ~~90:10~~ 95:5 rule, with the majority of the code being straightforward except for the parts involving shuffling variables and binders. 
 
 It's worth reflecting on *why* this is so difficult. Categories don't have a first-class notion of variable context or binding operations, so when we're translating from a calculus that does, we need some way of turning binders and variables into morphisms. Doing so, however, makes our semantics more awkward and verbose, and can lead to an explosion of code size. 
 
