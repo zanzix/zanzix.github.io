@@ -1,3 +1,261 @@
+import Data.Fin 
+
+data Lan : (j: k -> Type) -> (f : k -> Type) -> Type -> Type where 
+  MkLan : {j: k -> Type} -> {a:k} -> (j a -> b) -> f a -> Lan j f b
+
+data ArithF : Type -> Type where
+  Val : Nat -> ArithF a 
+  Add : a -> a -> ArithF a 
+
+data ArithN : Nat -> Type where 
+  VarN : Fin n -> ArithN n
+  AddN : ArithN n -> ArithN n -> ArithN n 
+
+data ArithN' : Nat -> Type -> Type where 
+  VarN' : Fin n -> ArithN' n a
+  AddN' : a -> a -> ArithN' n a 
+
+data ArithN'' : (Nat -> Type) -> Nat -> Type where 
+  VarN'' : Fin n -> ArithN'' p n
+  AddN'' : p n -> p n -> ArithN'' p n 
+  AddNL : p (S n) -> p (S n) -> ArithN'' p n -- maybe linear context?
+  AddNL' : p n -> p n -> ArithN'' p (S (S n)) -- maybe linear context?
+
+data ArithSig : Nat -> Nat -> Type where 
+  ValS : Nat -> ArithSig n (S n)
+  AddS : ArithSig (S (S n)) n
+  VarS : Fin n -> ArithSig n n 
+
+data LTy = Val' | Expr 
+
+data ListNF : (LTy -> Type) -> LTy -> Type where 
+  NilNF : ListNF f Expr
+  ValNF : Nat -> ListNF f Val'
+  ConsNF : ListNF f Val' -> ListNF f Expr -> ListNF f Expr 
+
+data Ty = B | N 
+
+-- BoolArith as (Type -> Type) vs (Ty -> Type)
+
+namespace Fix
+  data Mu : (pattern : Type -> Type) -> Type where 
+    In : p (Mu p) -> Mu p 
+
+  fix1 : Mu ArithF
+  fix1 = In $ Add (In $ Val 6) (In $ Val 5)
+
+namespace Free 
+  data Free : (pattern: (Type -> Type)) -> (var: Type) -> Type where
+  	Var : v -> Free p v
+  	In : p (Free p v) -> Free p v 
+  	InKl : p x -> (x -> Free p v) -> Free p v
+  	InKl' : (x -> Free p v) -> p x -> Free p v
+  	Enter : (Free p) (Free p v) -> Free p v
+  	EnterKl : Free p x -> (x -> Free p v) -> Free p v
+
+--    EnterFr : (x -> Free p n) -> (n -> Free p a) -> Free p a
+
+  free1 : Free ArithF String 
+  free1 = In (Add (Var "test") (Var "this"))
+
+  free1' : Free ArithF String 
+  free1' = InKl (Add "test" "this") Var 
+  -- TODO: free1 <-> free1'. will this work? same algeba needs to do the same thing
+
+  free1'' : Free ArithF String 
+  free1'' = InKl (Add (Var "test") (Var "this")) id
+  -- we can't use "id" in freest! It must be Pure
+
+  freen : Free ArithF (Fin 2)
+  freen = In (Add (Var FZ) (Var (FS FZ)))
+
+  freen' : Free ArithF (Fin 2)
+  freen' = InKl ?z ?y
+  -- TODO: freen <-> freen', should do the same as above but not partial
+
+  free2 : Free ArithF String 
+  free2 = In (Add (In (Add (Var "test") (Var "this"))) (Var "and_this"))
+
+  -- Ooof, will this work?
+  free2' : Free ArithF String
+  free2' = InKl (Add "test" "this") (\s => (InKl (Add s "and_this") Var))
+
+  free2'' : Free ArithF String 
+  free2'' = 
+    let ex = InKl (Add (InKl (Add "test" "this") Var) (Var "and this")) Var
+    in EnterKl ex id
+
+    -- can formulate Join using EnterKl. But using inKl?
+
+  free2''' : Free ArithF String 
+  free2''' = InKl (Add (InKl (Add "test" "this") Var) (Var "and this")) id
+
+  free2'''' : Free ArithF String 
+  free2'''' = let ex1 = InKl {p=ArithF} (Add (InKl {p=ArithF} (Add "test" "this") ?v2) ?v) in  ?vs
+  -- (Var "and this")
+
+  free3 : Free ArithF String 
+  free3 = In (Add (In (Add (Var "test") (Var "this"))) (Var "and_this"))
+
+    --InKl' ?z1 (InKl' Var ?ys)
+    -- (Add "test" "this")  ?z0 
+  -- (Add "test" "this") ?z0
+
+
+
+
+--  free2' = InKl (Add (InKl (Add "test" "this") Var) ?v3) Var
+  
+
+
+  -- TODO: more layers for coyoneda version
+  
+  -- todo: partial eval
+
+  -- todo: full eval? but how does substitution interact with Fin n?
+  -- limitations? brittleness?
+
+namespace Op
+  data Operad : (Type -> Type) -> (Nat -> Type) where 
+    Var : Fin n -> Operad f n
+    In  : f (Operad f n) -> Operad f n
+    InB : f (Operad f (S n)) -> Operad f n
+    InB2 : f (Operad f (S (S n))) -> Operad f n
+    LetBind : f a -> Operad f (S n) -> Operad f n
+    OutB : f (Operad f n) -> Operad f (S n)
+    OutB2 : f (Operad f n) -> Operad f (S (S n))
+
+  op1 : Operad ArithF 2
+  op1 = In (Add (Var FZ) (Var $ FS FZ))
+
+  -- looks wrong, bind a variable to a layer?
+  op2 : Operad ArithF 1 
+  op2 = InB (Add (Var FZ) (Var $ FS FZ))
+
+  -- bind both? will this work?
+  op3 : Operad ArithF 0 
+  op3 = InB2 (Add (Var FZ) (Var $ FS FZ))
+  
+  -- try with OutB and OutB2 - request a variable from the environment?
+    
+  -- what should rel-bind be?
+
+namespace IFix
+  data IxMu : ((k -> Type) -> (l -> Type)) -> (l -> Type) where 
+    In : f (IxMu f) v -> IxMu f v
+
+  -- TODO: IFix ArithNF
+
+  -- IFix : (k -> Type) -> (k -> Type)
+  -- vs 
+  -- Rel  : (k -> Type) && (k -> Type)
+
+  -- TODO: eval : IFix Operad -> Nat ?
+
+namespace RFix 
+  data RFix : (k -> Type) -> l -> Type where
+  -- Operad as RFix?
+
+namespace Rel 
+  -- The free relative monad over j
+  data Freest : {k : Type} -> (k -> Type) -> (k -> Type) -> k -> Type where
+    Var  : {j : k -> Type} -> j v -> Freest j f v
+    In : {j : k -> Type} -> Lan j f (Freest j f v) -> Freest j f v
+    InKl  : {j : k -> Type} -> f x -> (j x -> Freest j f a) -> Freest j f a
+
+  data Freest' : {k : Type} -> (k -> Type) -> (k -> Type -> Type) -> k -> Type where
+    Var'  : {j : k -> Type} -> j v -> Freest' j f v
+    InKl'  : {j : k -> Type} -> {f : k -> Type -> Type} -> f x b -> (j x -> Freest' j f a) -> Freest' j f a
+
+  
+  Ariths : Type 
+  Ariths = Freest' Fin ArithN' 2
+
+  
+  fr1 : Freest (\a=>a) ArithF String 
+  fr1 = In $ MkLan Var (Add "test" "this") 
+  -- this is different to Free, we don't use 'Var' over the strings. does it work?
+  -- feels wrong... needs to be the recursor. can i do recursive expressions this way?
+
+
+  fr1' : Freest (\a=>a) ArithF String
+  fr1' = InKl (Add "test" "this") Var 
+
+
+  -- this is wrong - it expects a recursive type! need to remove recursor
+  fr1n : Freest Fin ArithN 2 
+  fr1n = InKl (AddN ?xf ?yf) Var 
+
+  -- i think totally broken? inner type can be anything
+  fr1n' : Freest' Fin ArithN' 2
+  fr1n' = InKl' (AddN' "why" "strings") Var'
+
+  -- ok looks correct - recursor replaced with Fin? Now it has same shape as fr1, with variables inside
+  fr1n'' : Freest Fin (ArithN'' Fin) 2 
+  fr1n'' = InKl (AddN'' FZ (FS FZ)) Var
+
+  -- erm, wrong? where would the two variables come from?
+  fr1n''' : Freest Fin (ArithN'' Fin) 0 
+  fr1n''' = InKl (AddNL FZ FZ) Var
+
+  -- ???? no idea what im trying to do here, i think it's broken.
+  fr1n'''' : Freest Fin (ArithN'' Fin) 2
+  fr1n'''' = InKl (AddNL' (FS FZ) FZ) ?vs
+
+  fr2 : Freest Fin ArithN 2
+  fr2 = In $ MkLan Var (AddN (VarN FZ) ((VarN (FS FZ))))
+
+  fr2' : Freest Fin ArithN 2 
+  fr2' = InKl (AddN (VarN FZ) ((VarN (FS FZ)))) Var
+
+  
+  add : Fin n -> Fin n -> Freest Fin (ArithN'' Fin) n
+  add n1 n2 = InKl (AddN'' n1 n2) Var
+  -- InKl (AddN'' s FZ) Var
+
+  -- Will this work? Is there a different way? can I bind two vars?
+  fr2n : Freest Fin (ArithN'' Fin) 2 
+  fr2n = InKl (AddN'' FZ (FS FZ)) (\s => add s FZ)
+  -- can I use smart constructors for both?
+
+  
+--  In (Add (In (Add (Var "test") (Var "this"))) (Var "and_this"))
+--  free2' : Freest Fin ArithN 2
+--  free2' = InKl (Add "test" "this") (\s => (InKl (Add s "and_this") Var))
+
+  -- TODO: Example with more complicated Var?
+  -- test with permutations!
+
+  -- TODO: ListNF as rfix?
+
+  --  InFst  : {j : k -> Type} -> f x -> (j x -> g a) -> FreeLanF j f g a
+
+{-}
+mcata : (Fin n -> c) -> Algebra f c -> Operad f n -> c
+mcata g alg = go where
+go : Free f a -> c
+go (Var a) = g a
+go (In $ fs) = alg $ (mcata g alg) fs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 {--
 Very broadly, the purpose of this blog series is to introduce the multicategory perspective. In a sense, multicategories generalise both categories and data types. Because of this, the series will be split into three parts:
 Data types - applying category theory to functional programming to get generic tools for working with data types
@@ -15,16 +273,12 @@ Some refs:
 --}
 -- from functor to operad
 
-data Mu : (pattern : Type -> Type) -> Type where 
-  In : p (Mu p) -> Mu p 
+
 
 -- compare to fixpoint of function?
 
 -- cata
 
-data Free : (pattern: (Type -> Type)) -> (var: Type) -> Type where
-	Var : v -> Free p v
-	In : p (Free p v) -> Free p v
 
 -- eval 
 

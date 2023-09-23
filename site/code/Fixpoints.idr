@@ -58,3 +58,7 @@ Which is why I consider it valuable to treat them separately. If we have a libra
 This is because fundamentally, all of these concepts live in separate categories. So rather than try to embed each category into the ones with the most structure, it would be better if we could express these concepts generically, and instantiate them to whichever category suits us in the moment.
 
 --}
+
+-- relative fixpoint
+--  data Mu : (k -> Type) -> (k -> Type) -> Type where
+--    In : Lan j f (Mu j f) -> Mu j f
