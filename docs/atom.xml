@@ -2,18 +2,19 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Some personal notes turned into a blog</title>
     <link href="https://zanzix.github.io/atom.xml" rel="self" type="application/rss+xml" />
-  <updated>2023-09-23T19:38:02Z</updated>
+  <updated>2023-09-23T19:50:33Z</updated>
   <author>
       <name>Zanzi</name>
   </author>
   <id>https://zanzix.github.io/</id>
 
   <entry>
-      <title>Lambda Calculus and Bicartesian Closed Categories, Part 1</title>
+      <title>Lambda Calculus and Bicartesian Closed Categories</title>
       <link href="https://zanzix.github.ioposts/bcc.html"/>
       <id>https://zanzix.github.ioposts/bcc.html</id>
       <updated>2023-08-25T00:00:00Z</updated>
-      <summary>Lets start the blog</summary>
+      <summary>Defining a typed combinator syntax, and compile it to an arbitrary
+Bicartesian Closed Category</summary>
       <content type="html"><![CDATA[<h2 id="into-the-bibby-zone">Into the Bibby Zone</h2>
 <p>As I've recently announced on Twitter, I'm starting a new blog series
 at the intersection of type theory, category theory, and functional

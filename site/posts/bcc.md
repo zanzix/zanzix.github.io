@@ -1,9 +1,9 @@
 ---
-title: "Lambda Calculus and Bicartesian Closed Categories, Part 1"
+title: "Lambda Calculus and Bicartesian Closed Categories"
 author: Zanzi
 date: Aug 25, 2023
 tags: []
-description: Lets start the blog
+description: Defining a typed combinator syntax, and compile it to an arbitrary Bicartesian Closed Category
 image: bibby.png
 ---
 

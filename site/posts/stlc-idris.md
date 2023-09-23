@@ -4,6 +4,7 @@ author: Zanzi
 date: Sep 23, 2023
 tags: []
 description: Converting the simply typed lambda calculus into typed combinators
+image: bibby-alone.png
 ---
 
 ## Introduction 
