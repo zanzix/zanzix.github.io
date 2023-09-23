@@ -75,7 +75,7 @@ Var  : {a : Ty} -> {g : List Ty} -> Elem a g -> Term   g  a
 
 So ```Id``` takes a single input to a single output, ```Var``` embeds a variable into a larger context, while ```LVar``` embeds the variable into a singleton context. From this we can see the difference between linear and cartesian variables - cartesian variables can be projected out of a larger context, ignoring the rest, while linear variables must be used without anything else remaining.
 
-Here (Elem)[https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html] is taken from the Idris standard library, it's kind of proof-relevant membership relation, which guarantees that the variable ```a``` will be inside of the larger context ```g```. 
+Here [Elem](https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html) is taken from the Idris standard library, it's kind of proof-relevant membership relation, which guarantees that the variable ```a``` will be inside of the larger context ```g```. 
 
 ```idr
 data Elem : a -> List a -> Type where

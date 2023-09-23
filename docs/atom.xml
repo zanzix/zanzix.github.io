@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Some personal notes turned into a blog</title>
     <link href="https://zanzix.github.io/atom.xml" rel="self" type="application/rss+xml" />
-  <updated>2023-09-23T19:33:16Z</updated>
+  <updated>2023-09-23T19:38:02Z</updated>
   <author>
       <name>Zanzi</name>
   </author>
@@ -12,7 +12,7 @@
       <title>Lambda Calculus and Bicartesian Closed Categories, Part 1</title>
       <link href="https://zanzix.github.ioposts/bcc.html"/>
       <id>https://zanzix.github.ioposts/bcc.html</id>
-      <updated>2023-08-10T00:00:00Z</updated>
+      <updated>2023-08-25T00:00:00Z</updated>
       <summary>Lets start the blog</summary>
       <content type="html"><![CDATA[<h2 id="into-the-bibby-zone">Into the Bibby Zone</h2>
 <p>As I've recently announced on Twitter, I'm starting a new blog series
@@ -425,7 +425,7 @@ tool we'll be using throughout the series - recursion schemes.</p>]]></content>
       <title>From Lambda Calculus to Bicartesian Closed Categories</title>
       <link href="https://zanzix.github.ioposts/stlc-idris.html"/>
       <id>https://zanzix.github.ioposts/stlc-idris.html</id>
-      <updated>2023-09-01T00:00:00Z</updated>
+      <updated>2023-09-23T00:00:00Z</updated>
       <summary>Converting the simply typed lambda calculus into typed combinators</summary>
       <content type="html"><![CDATA[<h2 id="introduction">Introduction</h2>
 <p>In the <a href="/posts/bcc">previous post</a> we've defined a typed
@@ -515,9 +515,8 @@ this we can see the difference between linear and cartesian variables -
 cartesian variables can be projected out of a larger context, ignoring
 the rest, while linear variables must be used without anything else
 remaining.</p>
-<p>Here (Elem)[<a
-href="https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html"
-class="uri">https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html</a>]
+<p>Here <a
+href="https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html">Elem</a>
 is taken from the Idris standard library, it's kind of proof-relevant
 membership relation, which guarantees that the variable <code>a</code>
 will be inside of the larger context <code>g</code>.</p>
