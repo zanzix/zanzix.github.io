@@ -1,7 +1,7 @@
 ---
 title: "From Lambda Calculus to Bicartesian Closed Categories"
 author: Zanzi
-date: Sep 1, 2023
+date: Sep 23, 2023
 tags: []
 description: Converting the simply typed lambda calculus into typed combinators
 ---

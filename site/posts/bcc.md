@@ -1,7 +1,7 @@
 ---
 title: "Lambda Calculus and Bicartesian Closed Categories, Part 1"
 author: Zanzi
-date: Aug 10, 2023
+date: Aug 25, 2023
 tags: []
 description: Lets start the blog
 image: bibby.png
