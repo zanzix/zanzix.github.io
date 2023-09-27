@@ -95,45 +95,45 @@ eval (Cons f g) = f . (eval g)
 
 ### The Free Bicartesian Closed Category over Types
 
-We will now go from a free category to a free category with products, coproducts, and exponentials. For readers new to category theory, we will go through each of these properties in more granular detail in subsequent blog posts. But for now we will define them all in one go. 
+We will now go from a free category to a free category with products, coproducts, and exponentials. For readers new to category theory, we will go through each of these properties in more granular detail in subsequent blog posts. But for now we will define them all in one go.
 
-We can then define a free bicartesian category over types as 
+We can then define our bicartesian category over types as: 
 
 ```idr
-data FreeBCC : Graph Type -> Graph Type where
+data BCC : Graph Type -> Graph Type where
   -- Embedding a primitive is now a separate operation 
-  Prim : k a b -> FreeBCC k a b
+  Prim : k a b -> BCC k a b
   -- Identity arrow: a → a
-  Id : {a : Type} -> FreeBCC p a a 
+  Id : {a : Type} -> BCC p a a 
   -- Composition of arrows: (b → c) → (a → b) → (a → c)
-  Comp : {a, b, c : Type} -> FreeBCC k b c -> FreeBCC k a b -> FreeBCC k a c
+  Comp : {a, b, c : Type} -> BCC k b c -> BCC k a b -> BCC k a c
   -- Product introduction: (a → b) → (a → c) → (a → (b * c))
-  ProdI : {a, b, c : Type} -> FreeBCC k a b -> FreeBCC k a c 
-    -> FreeBCC k a (b, c) 
+  ProdI : {a, b, c : Type} -> BCC k a b -> BCC k a c 
+    -> BCC k a (b, c) 
   -- First projection: (a * b) → a
-  Fst : {a, b : Type} -> FreeBCC k (a, b) a
+  Fst : {a, b : Type} -> BCC k (a, b) a
   -- Second projection: (a * b) → b
-  Snd : {a, b : Type} -> FreeBCC k (a, b) b
+  Snd : {a, b : Type} -> BCC k (a, b) b
   -- Coproduct introduction: (b → a) → (c → a) → (b + c → a)
-  CoprodI : {a, b, c : Type} -> FreeBCC k b a -> FreeBCC k c a 
-    -> FreeBCC k (Either b c) a 
+  CoprodI : {a, b, c : Type} -> BCC k b a -> BCC k c a 
+    -> BCC k (Either b c) a 
   -- Left injection: a → (a + b)
-  InL : {a, b : Type} -> FreeBCC k a (Either a b)
+  InL : {a, b : Type} -> BCC k a (Either a b)
   -- Right injection: b → (a + b)
-  InR : {a, b : Type} -> FreeBCC k b (Either a b)
+  InR : {a, b : Type} -> BCC k b (Either a b)
   -- Exponential elimination: 
-  Apply : {a, b : Type} -> FreeBCC k ((a -> b), a) b
+  Apply : {a, b : Type} -> BCC k ((a -> b), a) b
   -- Currying: (a * b → c) → (a → (b ⇨ c)) 
-  Curry : {a, b, c : Type} -> FreeBCC k (a, b) c -> FreeBCC k a (b -> c) 
+  Curry : {a, b, c : Type} -> BCC k (a, b) c -> BCC k a (b -> c) 
   -- Uncurrying: (a → (b ⇨ c)) → (a * b → c) 
-  Uncurry : {a, b, c : Type} -> FreeBCC k a (b -> c) -> FreeBCC k (a, b) c
+  Uncurry : {a, b, c : Type} -> BCC k a (b -> c) -> BCC k (a, b) c
 ```
 
 (One important caveat is that our data-type now represents a free f-algebra rather than a free category in the strict sense. We'll talk more about the distinction in future posts, but for now I'll abuse notation and keep calling both concepts by the same name.)
 
 Defining an evaluator is as simple as it was before, we just match each constructor to the corresponding Idris function
 ```idr
-eval : FreeBCC Idr a b -> Idr a b 
+eval : BCC Idr a b -> Idr a b 
 eval (Prim f) = f
 eval Id = id 
 eval (Comp f g) = (eval f) . (eval g) 
@@ -171,7 +171,7 @@ record Category (g: Graph Type) where
 We adjust our evaluator accordingly to use the new record type:
 
 ```idr
-eval' : Category g -> FreeBCC g s t -> g s t  
+eval' : Category g -> BCC g s t -> g s t  
 eval' alg (Prim f) = f 
 eval' alg Id  = alg.id 
 eval' alg (Comp f g) = alg.comp (eval' alg f) (eval' alg g) 
