@@ -177,6 +177,7 @@ mutual
   -- take a layer of `f a` to an `a`
   fold : Functor f => (f a -> a) -> Fix f -> a 
   fold alg (In x) = alg (mapFold alg x)
+  
   -- go underneath an f to turn Fix f to a
   mapFold : Functor f => (f a -> a) -> f (Fix f) -> f a 
   mapFold alg op = map (fold alg) op
