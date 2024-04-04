@@ -8,7 +8,7 @@ image: algebraic-fish.png
 ---
 
 ## Fixpoints over Functors
-In the previous two blog posts we've looked at a combinator language for categories, as well as a data type for simply typed lambda terms. We've also had a look at translating from one to the other. Both blog posts assumed quite a bit of background knowledge, so our goal today will be to start at the very beginning and introduce recursion schemes step by step. 
+In the previous two blog posts we've looked at a [combinator language for categories](https://zanzix.github.io/posts/1-bcc.html), as well as a [data type for simply typed lambda terms](https://zanzix.github.io/posts/2-stlc-idris.html). We've also had a look at translating from one to the other. Both blog posts assumed quite a bit of background knowledge, so our goal today will be to start at the very beginning and introduce recursion schemes step by step. 
 
 ## Semirings
 To start, let's look at how we'd normally implement a datatype for semirings, along with an evaluator for it, and then see how we can generalise it using recursion schemes. 
@@ -49,9 +49,9 @@ The starting idea is that the same way that we bundle up our constructors into a
     add : a -> a -> a     
     mult : a -> a -> a    
     zero : a               
-    one: a     
+    one : a     
 
--- if we uncurry we can see that all of these are really morphisms of a category
+-- if we uncurry we can see that these are all just morphisms of a category
   record SemiringAlgebra' (a : Type) where
     add : (a, a) -> a
     mult : (a, a) -> a
@@ -64,7 +64,7 @@ Using SemiringAlgebra we can get a slightly cleaner looking evaluator:
 ```
 But it would involve the same amount of boilerplate as before. 
 
-The problem is that we are essentially declaring each concept twice - once as a constructor, and once as a function consuming it. What we would like is to do declare it once, and derive the rest from that single declaration .
+The problem is that we are essentially declaring each concept twice - once as a constructor, and once as a function consuming it. What we would like is to do declare it once, and derive the rest from that single declaration.
 
 Now, Semiring has the type `Type -> Type`, and so does SemiringAlgebra. So we want something of the type `(Type -> Type) -> (Type -> Type)`. This turns out to be fairly straightforward:
 

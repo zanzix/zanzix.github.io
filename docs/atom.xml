@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Some personal notes turned into a blog</title>
     <link href="https://zanzix.github.io/atom.xml" rel="self" type="application/rss+xml" />
-  <updated>2024-04-04T15:02:00Z</updated>
+  <updated>2024-04-04T18:06:18Z</updated>
   <author>
       <name>Zanzi</name>
   </author>
@@ -13,14 +13,16 @@
       <link href="https://zanzix.github.ioposts/3-rec-idris.html"/>
       <id>https://zanzix.github.ioposts/3-rec-idris.html</id>
       <updated>2024-04-04T00:00:00Z</updated>
-      <summary>Lets start the blog</summary>
+      <summary>Refactoring Algebraic Datatypes with Recursion Schemes</summary>
       <content type="html"><![CDATA[<h2 id="fixpoints-over-functors">Fixpoints over Functors</h2>
-<p>In the previous two blog posts we've looked at a combinator language
-for categories, as well as a data type for simply typed lambda terms.
-We've also had a look at translating from one to the other. Both blog
-posts assumed quite a bit of background knowledge, so our goal today
-will be to start at the very beginning and introduce recursion schemes
-step by step.</p>
+<p>In the previous two blog posts we've looked at a <a
+href="https://zanzix.github.io/posts/1-bcc.html">combinator language for
+categories</a>, as well as a <a
+href="https://zanzix.github.io/posts/2-stlc-idris.html">data type for
+simply typed lambda terms</a>. We've also had a look at translating from
+one to the other. Both blog posts assumed quite a bit of background
+knowledge, so our goal today will be to start at the very beginning and
+introduce recursion schemes step by step.</p>
 <h2 id="semirings">Semirings</h2>
 <p>To start, let's look at how we'd normally implement a datatype for
 semirings, along with an evaluator for it, and then see how we can
@@ -67,9 +69,9 @@ class="sourceCode idris"><code class="sourceCode idris"><span id="cb3-1"><a href
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">add</span> <span class="ot">:</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> a     </span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mult</span> <span class="ot">:</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> a    </span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">zero</span> <span class="ot">:</span> a               </span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">one</span><span class="ot">:</span> a     </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">one</span> <span class="ot">:</span> a     </span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- if we uncurry we can see that all of these are really morphisms of a category</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- if we uncurry we can see that these are all just morphisms of a category</span></span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">record</span> <span class="dt">SemiringAlgebra&#39;</span> (a <span class="ot">:</span> <span class="dt">Type</span>) <span class="kw">where</span></span>
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">add</span> <span class="ot">:</span> (a, a) <span class="ot">-&gt;</span> a</span>
 <span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mult</span> <span class="ot">:</span> (a, a) <span class="ot">-&gt;</span> a</span>
@@ -83,7 +85,7 @@ class="sourceCode idris"><code class="sourceCode idris"><span id="cb4-1"><a href
 <p>The problem is that we are essentially declaring each concept twice -
 once as a constructor, and once as a function consuming it. What we
 would like is to do declare it once, and derive the rest from that
-single declaration .</p>
+single declaration.</p>
 <p>Now, Semiring has the type <code>Type -&gt; Type</code>, and so does
 SemiringAlgebra. So we want something of the type
 <code>(Type -&gt; Type) -&gt; (Type -&gt; Type)</code>. This turns out
@@ -208,9 +210,10 @@ class="sourceCode idris"><code class="sourceCode idris"><span id="cb15-1"><a hre
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- take a layer of `f a` to an `a`</span></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fold</span> <span class="ot">:</span> <span class="dt">Functor</span> f <span class="ot">=&gt;</span> (f a <span class="ot">-&gt;</span> a) <span class="ot">-&gt;</span> <span class="dt">Fix</span> f <span class="ot">-&gt;</span> a </span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  fold alg (<span class="dt">In</span> x) <span class="fu">=</span> alg (mapFold alg x)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- go underneath an f to turn Fix f to a</span></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mapFold</span> <span class="ot">:</span> <span class="dt">Functor</span> f <span class="ot">=&gt;</span> (f a <span class="ot">-&gt;</span> a) <span class="ot">-&gt;</span> f (<span class="dt">Fix</span> f) <span class="ot">-&gt;</span> f a </span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  mapFold alg op <span class="fu">=</span> map (fold alg) op</span></code></pre></div>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- go underneath an f to turn Fix f to a</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mapFold</span> <span class="ot">:</span> <span class="dt">Functor</span> f <span class="ot">=&gt;</span> (f a <span class="ot">-&gt;</span> a) <span class="ot">-&gt;</span> f (<span class="dt">Fix</span> f) <span class="ot">-&gt;</span> f a </span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  mapFold alg op <span class="fu">=</span> map (fold alg) op</span></code></pre></div>
 <p>It can get tedious writing all these functor constraints after a
 while. If we had macros, we could automate this, but once again we can
 get away without macros with the help of category theory - using what is
