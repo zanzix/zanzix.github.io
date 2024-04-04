@@ -2,7 +2,7 @@ module Data.First.Mutu
 
 import Algebra.Indexed.Fix
 import Algebra.Indexed.Algebra
-import Kan.Indexed.Coyoneda
+import Indexed.Coyoneda
 
 import Data.Fin 
 

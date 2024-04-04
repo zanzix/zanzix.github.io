@@ -6,123 +6,15 @@ tags: [functor, fixpoint, operad]
 description: Lets start the blog
 image: code.jpg
 ---
-- TODO: Fix typo in first blog post 
-- TODO: Merge drafts, find leftover drafts lying around in /home
-
-## Fixpoints over Functors
-In the previous two blog posts we've looked at a combinator language for categories, as well as a data type for simply typed lambda terms. We've also had a look at translating from one to the other. 
-
-## Free Semirings
-To start, let's look at how we'd normally implement a data type of semirings. 
-
-```idr
-data Semiring : Type -> Type where 
-  Val : a -> Semiring a
-  Zero : Semiring a 
-  One : Semiring a
-  Mult : Semiring a -> Semiring a -> Semiring a 
-  Add : Semiring a -> Semiring a -> Semiring a 
-```
-
-Now we would like to implement an evaluator for each of the constructors of the semiring.
-
-Rather than doing it manually for each choice of function, we would like to abstract it
-
-eval : (zero : a, one : a, mult : a -> a -> a, add : a -> a -> a) -> Semiring a -> a 
-eval ... 
-
-Writing out the entirety of all constructors each time would get tedious though, so we can abstract away the common pattern into what is known as an algebra
-
-AlgebraSemiring : Semiring a -> a 
-
-But we can even go further 
-Algebra : f a -> a 
-
-Now our evaluator looks like 
-
-eval : Algebra Semiring a -> Semiring a -> a  
-eval .... 
-
-This is great, but what happens when we decide to implement another data structure? Let's say we wish to build an evaluator for a list.
- 
-eval : Algebra List a -> List a -> a
-... 
-
-We now need to write a new eval function from scratch. 
-
-What if instead we could write a generic function.
-
-eval : Algebra f a -> f a -> a? 
-eval = ---what-goes-here?
-
-This is what recursion schemes and fixpoints of functors let us do. 
-
-## Fixpoints of functors
-We can refactor our free semiring by introducing a datatype of type level fixpoints:
-
-```idr
-data Mu : (Type -> Type) -> Type where 
-  In : f (Mu f) -> Mu f
-```
-This lets us rewrite our previous data type in terms of what is called a 'base functor'. Since Mu essentially consumes a free variable to use for recursive calls, we'll have to fix our values to some hardcoded type, ie Nat.
-
-```idr
-data SemiringF : Type -> Type where 
-  Val : Nat -> SemiringF r
-  Zero : SemiringF r 
-  One : SemiringF r
-  Mult : r -> r -> SemiringF r 
-  Add : r -> r -> SemiringF r
-
-data ListF : Type -> Type -> Type where 
-  NilF : ListF a b 
-
-Semiring : Type 
-Semiring = Mu SemiringF
-
-ex1 : Semiring 
-
-ex2 : Semiring
-
-The syntax encoding looks a bit harsh, but we can use smart constructors to make it nicer
-
-ex1'
-ex2'
-
-the upside is that now we have a *generic* evaluator for any data-type f
-
-cata : (f a -> a) -> Fix f -> a 
-
-```
-
-Of course, we don't actually want to lose the flexibility of working with an arbitrary carrier. So we can turn our SemiringF into a functor with two variables, the first of which is our carrier, and the second takes care of the recursive position. 
-
-```idr
-data SemiringF : Type -> Type -> Type where 
-  Val : a -> SemiringF a r
-  Zero : SemiringF a r
-  One : SemiringF a r
-  Mult : r -> r -> SemiringF a r 
-  Add : r -> r -> SemiringF a r
-
-Semiring : Type -> Type 
-Semiring a = Mu (SemiringF a)
-```
-
-We've now recovered our original formulation of a free term algebra over a semiring.
-
-If we get bored of writing the Functor instance each time, we can do a mendler version:
-
-However, it's now a little bit wonky that we're treating a semiring as a *bi*functor. While there's a formulation of these container like base functors that treats them as semirings, the route we'll go instead is to generalise from fixpoints of functors to free monads. This means that we now have an extra type argument that stands in for the variables of our expression. 
-
+todo: eval 
 
 ## Free monads 
 "Free monad over the signature of a semiring"
 
-```idr
-  data Free : (base: Type -> Type) -> (var : Type) -> Type where 
-    Var : v -> Free f v
-    In : f (Free f v) -> Free f v
+```idris
+data Free : (base: Type -> Type) -> (var : Type) -> Type where 
+  Var : v -> Free f v
+  In : f (Free f v) -> Free f v
 ```
 
 ```
@@ -135,8 +27,7 @@ data SemiringF : Type -> Type -> Type where
 
 With our evaluator now being
 
-```idr
-eval : 
+```idris
 
 ```
 
@@ -161,13 +52,8 @@ We could even use Fin, but our number of variables will stay fixed globally in a
 ## Free operad with Let
 We could try to formulate some notion of 'monad with let binding' that let's us interact with the variables.
 It would look something like
-```idr
+```idris
 FreeOp
-```
-
-todo: eval 
-
-
 But the problem is that this is no longer a *monad* in the traditional sense, in fact it doesn't look like a monad at all. We could try to formulate this as an indexed functor, along with a whole bunch of recursion scheme machinery for working with indexed types - which we will do in the next blog post - but for now our goal is to keep things simple. The problem with the indexed version is that indexed functors have carriers in indexed types. But we'd like to formulate algebras with carriers in standard types.  
 
 Can we turn FreeOp into some kind of monad? Yes we kan! There's a clever trick that we can use here involving relative monads, but before we get to it, let's take a little detour and fix another one of our running problems and generalise away from needing a functor instance. It might seem like a segway at first, but it will pay off in the end.  
@@ -175,7 +61,7 @@ Can we turn FreeOp into some kind of monad? Yes we kan! There's a clever trick t
 ## Freer Monads
 The standard way of formulating free monads that don't need a functor constraint is known as a "Freer" monad. It's a bit of a silly pun, since it's still *free*, just on something else. Whereas the free monad is free on a functor, the freer monad is free on an arbitrary data type. 
 
-```idr
+```idris
 data Freer : (Type -> Type) -> Type -> Type where
   Var : v -> Freer f v 
   In : f x -> (x -> Freer f v) -> Freer f v
@@ -188,8 +74,7 @@ So essentially we're building in the kleisli continuation into the term itself.
 
 Our evaluator now being
 
-```idr
-eval : 
+```idris
 
 ```
 
@@ -234,7 +119,7 @@ catafr : (a -> c) -> Algebra f a -> Freer f a -> c
 
 But we could also use the insight we've learned from the previous section and incorporate our Coyoneda into the algebra itself.
 
-```idr
+```idris
 catafr : (a -> c) -> Algebra (Coyoneda f) c -> Freer f a -> c
 catafr g alg = go where 
   go : Freer f a -> c
@@ -244,7 +129,7 @@ catafr g alg = go where
 
 Why would we want to? For starters, this would let us do a simplified mendler fold for a *free* monad, rather than a freer one
 
-```idr
+```idris
 catafr : (a -> c) -> Algebra (Coyoneda f) c -> Free f a -> c
 catafr g alg = go where 
   go : Free f a -> c
@@ -257,7 +142,7 @@ But there's another reason why we might want to do this, which has to do with an
 ## My favorite piece of glue code 
 If you've ever stayed up late browsing the various category theory packages on hackage, you might have come across a data type known as a "left kan extension", which bears a striking resemblance to Coyoneda. 
 
-```idr
+```idris
 data Lan :
 ```
 
@@ -278,8 +163,6 @@ We can see that the thing in the middle is exactly our familiar friend, the left
 data Tm' : ...
   Lan 
 
-
-
 We can recover Free as Lan Id 
 
 
@@ -296,8 +179,6 @@ TODO: translate form fin algebras to coyoneda algebras to kan algebras
 In this post, we have seen the first glimpse of the free relative monad, and we've seen that it corresponds to fixpoints of endofunctors and free monads. The jargon way of describing what it is, is that it's a "free operad", ie a single sorted algebraic theory. 
 In the following blog posts we will see that we could do far more than just this with our machinery: multi sorted algebraic theories, signatures with binding, and full fledged *type theories*. 
 
-
-
 ## Vect-representation of a free operad
 
 ## Let bindings?
@@ -308,30 +189,6 @@ First, lets introduce the fixpoint of an endofunctor
 data Mu : (pattern : Type -> Type) -> Type where
 	In : {f: Type -> Type} -> f (Mu f) -> Mu f
 ```
-
-
-We can build expressions with it
-
-``` idris
-example expressions
-
-```
-
-to evaluate them, we define a notion of algebra
-
-```idris 
-Algebra : (Type -> Type) -> Type -> Type
-
-Algebra f a = f a -> a
-```
-
-and we define a catamorphism, or a fold, which uniformly evaluates any 'f' that's a functor
-
-``` idris
-cata : Functor f => Algebra f a -> Mu f -> a
-cata alg (In op) = alg (map (cata alg) op)
-```
-
 TODO: Try doing this with mendler-style eval which doesn't rely on Functor
 
 Now, this gives us a notion of closed expression. We can represent algebraic signatures, say, Monoids, Semirings, and we can evaluate them. 
@@ -402,10 +259,10 @@ And indeed, this is a common way of doings things in Haskell. But it doesn't sol
 Since we're using dependent types, we can go a step further, and define well-scoped terms by construction. 
 
 ```idris
-data Operad : (Type -> Type) -> (Nat -> Type -> Type) where 
-Var : Fin n -> Operad f n a
-LetF : f (Operad f (S n) a) -> Operad f n a
-LetBind : f a -> Operad f (S n) a -> Operad f n a)
+-- data Operad : (Type -> Type) -> (Nat -> Type -> Type) where 
+-- Var : Fin n -> Operad f n a
+-- LetF : f (Operad f (S n) a) -> Operad f n a
+-- LetBind : f a -> Operad f (S n) a -> Operad f n a)
 ```
 TODO: might need to change it to Nat -> Type -> Type to be more regular?
 	it'd make it consistent with typed languages: List Ty -> Ty -> Type
