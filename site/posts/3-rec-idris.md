@@ -3,7 +3,7 @@ title: "Introduction to Recursion Schemes with Idris"
 author: Zanzi
 date: Apr 4, 2024
 tags: []  
-description: Lets start the blog
+description: Refactoring Algebraic Datatypes with Recursion Schemes
 image: algebraic-fish.png
 ---
 
@@ -177,7 +177,7 @@ mutual
   -- take a layer of `f a` to an `a`
   fold : Functor f => (f a -> a) -> Fix f -> a 
   fold alg (In x) = alg (mapFold alg x)
-  
+
   -- go underneath an f to turn Fix f to a
   mapFold : Functor f => (f a -> a) -> f (Fix f) -> f a 
   mapFold alg op = map (fold alg) op
