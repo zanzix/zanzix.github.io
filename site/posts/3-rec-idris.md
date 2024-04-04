@@ -4,6 +4,7 @@ author: Zanzi
 date: Apr 4, 2024
 tags: []  
 description: Lets start the blog
+image: algebraic-fish.png
 ---
 
 ## Fixpoints over Functors
