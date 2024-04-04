@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:fb="http://ogp.me/ns/fb#">
+<head profile="http://www.w3.org/2005/10/profile">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6WEVP6B3NL"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-6WEVP6B3NL');
+    </script>    
+    <meta property="og:image" content="/images/small-bibby.png" />
+    <meta charset="UTF-8">
+    <meta name="description" content="Some personal notes turned into a blog">
+    <meta name="author" content="Zanzi">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tangled_zans">
+<meta name="twitter:creator" content="@tangled_zans">
+<meta name="twitter:title" content="Introduction to Recursion Schemes with Idris">
+    <meta name="twitter:description" content="Lets start the blog">
+        <title>Introduction to Recursion Schemes with Idris</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a id="beacon" href="/">
+                <div id="home-text"> HOME </div>
+            </a>
+        </nav>
+    
+        <div class="right-sidebar">
+    
+            <a class="ext-link" href="https://twitter.com/tangled_zans">
+            <img src="/images/twitter-logo.png" alt="Twitter Profile"/>
+        </a>
+        <a class="ext-link" rel="me" href="https://mathstodon.xyz/@zanzi">
+                <img src="/images/mastodon-logo.svg" alt="Mastodon Profile"/>
+              </a>        
+        <div id="theme-button">DAY</div>
+        </div>
+    </header>
+
+<div id="page">
+    <div class="wrapper">
+        <div class="masthead">
+            <span class="title">
+                Introduction to Recursion Schemes with Idris
+            </span>
+            <br>
+
+            <br>
+            <span class="byline">by Zanzi</span>
+            <br>
+            <span class="date">Apr 4, 2024</span>
+            <br>
+            <div class="metadata">
+            </div>
+            <div class="tags">
+            </div>
+        </div>
+    </div>
+    <article class="post">
+        <h2 id="fixpoints-over-functors">Fixpoints over Functors</h2>
+<p>In the previous two blog posts we've looked at a combinator language
+for categories, as well as a data type for simply typed lambda terms.
+We've also had a look at translating from one to the other. Both blog
+posts assumed quite a bit of background knowledge, so our goal today
+will be to start at the very beginning and introduce recursion schemes
+step by step.</p>
+<h2 id="semirings">Semirings</h2>
+<p>To start, let's look at how we'd normally implement a datatype for
+semirings, along with an evaluator for it, and then see how we can
+generalise it using recursion schemes.</p>
+<p>First, we'll add a constructor for each operation.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> <span class="dt">Simple</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">data</span> <span class="dt">Semiring</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span> </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Val</span> <span class="ot">:</span> value <span class="ot">-&gt;</span> <span class="dt">Semiring</span> value</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">One</span> <span class="ot">:</span> <span class="dt">Semiring</span> value</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Zero</span> <span class="ot">:</span> <span class="dt">Semiring</span> value </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Mult</span> <span class="ot">:</span> <span class="dt">Semiring</span> value <span class="ot">-&gt;</span> <span class="dt">Semiring</span> value <span class="ot">-&gt;</span> <span class="dt">Semiring</span> value </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Add</span> <span class="ot">:</span> <span class="dt">Semiring</span> value <span class="ot">-&gt;</span> <span class="dt">Semiring</span> value <span class="ot">-&gt;</span> <span class="dt">Semiring</span> value </span></code></pre></div>
+<p>Now we would like to implement an evaluator for each of the
+constructors of the semiring.</p>
+<p>Following the Haskell tradition of writing folds, it would look
+something like this:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>  <span class="fu">eval</span> <span class="ot">:</span> (add <span class="ot">:</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> a) <span class="ot">-&gt;</span> (mult <span class="ot">:</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> a) </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>      <span class="ot">-&gt;</span> (zero <span class="ot">:</span> a) <span class="ot">-&gt;</span> (one <span class="ot">:</span> a) <span class="ot">-&gt;</span> <span class="dt">Semiring</span> a <span class="ot">-&gt;</span> a </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  eval <span class="fu">_</span> <span class="fu">_</span> <span class="fu">_</span> <span class="fu">_</span> (<span class="dt">Val</span> v) <span class="fu">=</span> v</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  eval <span class="fu">_</span> <span class="fu">_</span> <span class="fu">_</span> one <span class="dt">One</span> <span class="fu">=</span> one</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  eval <span class="fu">_</span> <span class="fu">_</span> zero <span class="fu">_</span> <span class="dt">Zero</span> <span class="fu">=</span> zero</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  eval add mult zero one (<span class="dt">Mult</span> x y) <span class="fu">=</span> </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    mult (eval add mult zero one x) (eval add mult zero one y)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  eval add mult zero one (<span class="dt">Add</span> x y) <span class="fu">=</span> </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    add (eval add mult zero one x) (eval add mult zero one y)</span></code></pre></div>
+<p>This function, <a
+href="https://www.cs.nott.ac.uk/~pszgmh/fold.pdf">known as a fold</a>,
+is capable of expressing any interpreter that consumes this data type.
+However, while folds are interesting theoretically, the function itself
+is fairly boilerplate - all it's doing is matching constructors of the
+datatype to individual functions that consume them.</p>
+<p>Since we're going to be writing a lot of datatypes, we want to avoid
+writing an individual evaluator for each of them - we'd rather get them
+for free. If we had macros in our language, we could use them for this.
+But we don't need macros where we're going, as we've got category
+theory.</p>
+<p>The starting idea is that the same way that we bundle up our
+constructors into a single datatype, we can bundle up our consumers
+together as well.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>  <span class="kw">record</span> <span class="dt">SemiringAlgebra</span> (a <span class="ot">:</span> <span class="dt">Type</span>) <span class="kw">where</span> </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">add</span> <span class="ot">:</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> a     </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mult</span> <span class="ot">:</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> a    </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">zero</span> <span class="ot">:</span> a               </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">one</span><span class="ot">:</span> a     </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- if we uncurry we can see that all of these are really morphisms of a category</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">record</span> <span class="dt">SemiringAlgebra&#39;</span> (a <span class="ot">:</span> <span class="dt">Type</span>) <span class="kw">where</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">add</span> <span class="ot">:</span> (a, a) <span class="ot">-&gt;</span> a</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mult</span> <span class="ot">:</span> (a, a) <span class="ot">-&gt;</span> a</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">zero</span> <span class="ot">:</span> () <span class="ot">-&gt;</span> a</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">one</span> <span class="ot">:</span> () <span class="ot">-&gt;</span> a</span></code></pre></div>
+<p>Using SemiringAlgebra we can get a slightly cleaner looking
+evaluator:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  <span class="fu">eval&#39;</span> <span class="ot">:</span> <span class="dt">SemiringAlgebra</span> a <span class="ot">-&gt;</span> <span class="dt">Semiring</span> a <span class="ot">-&gt;</span> a </span></code></pre></div>
+<p>But it would involve the same amount of boilerplate as before.</p>
+<p>The problem is that we are essentially declaring each concept twice -
+once as a constructor, and once as a function consuming it. What we
+would like is to do declare it once, and derive the rest from that
+single declaration .</p>
+<p>Now, Semiring has the type <code>Type -&gt; Type</code>, and so does
+SemiringAlgebra. So we want something of the type
+<code>(Type -&gt; Type) -&gt; (Type -&gt; Type)</code>. This turns out
+to be fairly straightforward:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Algebra</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Algebra</span> f a <span class="fu">=</span> f a <span class="ot">-&gt;</span> a </span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="dt">SemiringAlgebra&#39;</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="dt">SemiringAlgebra&#39;</span> a <span class="fu">=</span> <span class="dt">Algebra</span> <span class="dt">Semiring</span> a </span></code></pre></div>
+<p>But how would we use such a thing? Naively, it seems that our
+evaluator has now become trivial:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalNope</span> <span class="ot">:</span> <span class="dt">Algebra</span> <span class="dt">Semiring</span> a <span class="ot">-&gt;</span> <span class="dt">Semiring</span> a <span class="ot">-&gt;</span> a </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>evalNope alg s <span class="fu">=</span> alg s </span></code></pre></div>
+<p>This type checks, however it does not do anything interesting, it
+merely applies the function that we've supplied to it, and we still need
+to define that function manually. What we really want is for this
+function to be derived for us from smaller pieces.</p>
+<p>To resolve this, we notice that our original SemiringAlgebra record
+does not actually tell us how to tear down a full semiring. All it does
+is tell us how to tear down each individual layer. So let's start by
+describing these layers as a data type.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">SemiringLayer</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span> </span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Val</span> <span class="ot">:</span> value <span class="ot">-&gt;</span> <span class="dt">SemiringLayer</span> value expression</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">One</span> <span class="ot">:</span> <span class="dt">SemiringLayer</span> value expression</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Zero</span> <span class="ot">:</span> <span class="dt">SemiringLayer</span> value expression</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Mult</span> <span class="ot">:</span> expression <span class="ot">-&gt;</span> expression <span class="ot">-&gt;</span> <span class="dt">SemiringLayer</span> value expression</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Add</span> <span class="ot">:</span> expression <span class="ot">-&gt;</span> expression <span class="ot">-&gt;</span> <span class="dt">SemiringLayer</span> value expression</span></code></pre></div>
+<p>The structure of this datatype is very similar to our original
+Semiring. But whereas Semiring was inductive - we defined complex
+expressions in terms of simpler ones - our new SemiringLayer only
+defines the contents of a <em>single</em> layer. And rather than being
+parametrised by a single type of values <code>Type -&gt; Type</code>, we
+now take two parameters <code>Type -&gt; Type -&gt; Type</code>: one for
+values, and one for complex expressions.</p>
+<p>The result is that our ideal evaluator would now look like this:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalAlg</span> <span class="ot">:</span> <span class="dt">Algebra</span> (<span class="dt">SemiringLayer</span> val) val <span class="ot">-&gt;</span> <span class="dt">Algebra</span> <span class="dt">Semiring</span> val  </span></code></pre></div>
+<p>In other words, we lift an algebra over a layer of a semiring to an
+algebra over the entire semiring. The final piece of the puzzle is that
+we would like to derive <code>Semiring</code> from
+<code>SemiringLayer</code>, rather than defining them separately.</p>
+<p>We do this by using a type-level fixpoint that operates on
+datatypes.</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Fix</span> <span class="ot">:</span> (layer <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">In</span> <span class="ot">:</span> {layer <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> layer (<span class="dt">Fix</span> layer) <span class="ot">-&gt;</span> <span class="dt">Fix</span> layer</span></code></pre></div>
+<p>It is not unlike a standard fixpoint operator that works on
+functions:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">partial</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">fix</span> <span class="ot">:</span> (a <span class="ot">-&gt;</span> a) <span class="ot">-&gt;</span> a </span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>fix f <span class="fu">=</span> f (fix f)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co">-- Don&#39;t try this at home: </span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- SemiringBoom : Type -&gt; Type </span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- SemiringBoom value = fix (SemiringLayer value)</span></span></code></pre></div>
+<p>Using <code>Fix</code>, we can now define <code>Semiring</code>
+inductively in terms of <code>SemiringLayer</code> - each time that
+<code>SemiringLayer</code> expects an expression, <code>Fix</code> will
+fill that in with <code>Fix SemiringLayer</code> as a subexpression:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Semiring</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Semiring</span> value <span class="fu">=</span> <span class="dt">Fix</span> (<span class="dt">SemiringLayer</span> value)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co">-- example expression</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ex1</span> <span class="ot">:</span> <span class="dt">Semiring</span> <span class="dt">Nat</span> </span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>ex1 <span class="fu">=</span> <span class="dt">In</span> (<span class="dt">Mult</span> (<span class="dt">In</span> <span class="dt">One</span>) (<span class="dt">In</span> <span class="fu">$</span> <span class="dt">Val</span> <span class="dv">2</span>))</span></code></pre></div>
+<p>The small downside is that we now have <code>In</code> around our
+code, however this can be avoided using smart constructors.</p>
+<p>Now we can finally define our evaluator uniformly without mentioning
+any individual constructor:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- We&#39;ll need a functor constraint for what&#39;s to come: </span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Functor</span> (<span class="dt">SemiringLayer</span> a) <span class="kw">where</span> </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  map f (<span class="dt">Val</span> x) <span class="fu">=</span> <span class="dt">Val</span> x </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  map f <span class="dt">One</span> <span class="fu">=</span> <span class="dt">One</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  map f <span class="dt">Zero</span> <span class="fu">=</span> <span class="dt">Zero</span> </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  map f (<span class="dt">Mult</span> x y) <span class="fu">=</span> <span class="dt">Mult</span> (f x) (f y) </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  map f (<span class="dt">Add</span> x y) <span class="fu">=</span> <span class="dt">Add</span> (f x) (f y)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co">-- Lift an algebra of a semiring layer to a semiring</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="fu">eval</span> <span class="ot">:</span> <span class="dt">Algebra</span> (<span class="dt">SemiringLayer</span> val) a <span class="ot">-&gt;</span> <span class="dt">Fix</span> (<span class="dt">SemiringLayer</span> val) <span class="ot">-&gt;</span> a </span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>eval alg (<span class="dt">In</span> op) <span class="fu">=</span> alg (map (eval alg) op)</span></code></pre></div>
+<p>And since our <code>eval</code> makes no reference to the
+constructors of <code>Semiring</code>, this means that we can generalise
+it to an arbitrary functor.</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Mission accomplished. </span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cata</span> <span class="ot">:</span> <span class="dt">Functor</span> f <span class="ot">=&gt;</span> <span class="dt">Algebra</span> f a <span class="ot">-&gt;</span> <span class="dt">Fix</span> f <span class="ot">-&gt;</span> a </span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>cata alg (<span class="dt">In</span> op) <span class="fu">=</span> alg (map (cata alg) op)</span></code></pre></div>
+<p>We can now apply our <code>cata</code> to arbitrary datatypes (with
+some restrictions, that we will talk about later in the blog), and
+provided that we give them a functor constraint.</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">ListLayer</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Nil</span> <span class="ot">:</span> <span class="dt">ListLayer</span> val expr </span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Cons</span> <span class="ot">:</span> val <span class="ot">-&gt;</span> expr <span class="ot">-&gt;</span> <span class="dt">ListLayer</span> val expr </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="dt">Functor</span> (<span class="dt">ListLayer</span> a) <span class="kw">where</span> </span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  map f [] <span class="fu">=</span> []</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  map f (<span class="dt">Cons</span> x y) <span class="fu">=</span> <span class="dt">Cons</span> x (f y)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="dt">List</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="dt">List</span> a <span class="fu">=</span> <span class="dt">Fix</span> (<span class="dt">ListLayer</span> a)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="co">-- we get the evaluator for free!</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="fu">foldr</span> <span class="ot">:</span> <span class="dt">Algebra</span> (<span class="dt">ListLayer</span> a) a <span class="ot">-&gt;</span> <span class="dt">Fix</span> (<span class="dt">ListLayer</span> a) <span class="ot">-&gt;</span> a </span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>foldr <span class="fu">=</span> cata</span></code></pre></div>
+<p>It's worth tracing out what exactly happens when we use
+<code>eval</code> - the gist of it is that there are two things that we
+need to do: use <code>map</code> to go under an <code>f</code> to turn
+<code>f (Fix f)</code> into <code>f a</code>, and then use
+<code>alg</code> to turn an <code>f a</code> into <code>a</code>.</p>
+<p>We can split <code>cata</code> into two mutually-inductive functions,
+each of which is responsible for one of these steps. As a bonus, this
+makes it structurally recursive over Fix f.</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">mutual</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- take a layer of `f a` to an `a`</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fold</span> <span class="ot">:</span> <span class="dt">Functor</span> f <span class="ot">=&gt;</span> (f a <span class="ot">-&gt;</span> a) <span class="ot">-&gt;</span> <span class="dt">Fix</span> f <span class="ot">-&gt;</span> a </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  fold alg (<span class="dt">In</span> x) <span class="fu">=</span> alg (mapFold alg x)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- go underneath an f to turn Fix f to a</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mapFold</span> <span class="ot">:</span> <span class="dt">Functor</span> f <span class="ot">=&gt;</span> (f a <span class="ot">-&gt;</span> a) <span class="ot">-&gt;</span> f (<span class="dt">Fix</span> f) <span class="ot">-&gt;</span> f a </span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  mapFold alg op <span class="fu">=</span> map (fold alg) op</span></code></pre></div>
+<p>It can get tedious writing all these functor constraints after a
+while. If we had macros, we could automate this, but once again we can
+get away without macros with the help of category theory - using what is
+known as the Coyoneda trick.</p>
+<h2 id="the-coyoneda-trick">The Coyoneda Trick</h2>
+<p>A lot has been written about the Yoneda lemma, and its dual cousin,
+Coyoneda. Personally, I find that it's one of those concepts that you
+don't so much "understand" as "get used to". And the best way to get
+used to something is to use it, which - luckily for us - we'll have
+plenty of opportunity to do so.</p>
+<p>The datatype representing Coyoneda is simple, it is a pair of a value
+inside of a functor, and a function that will map this value.
+Essentially, it is nothing more than a suspended map operation:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Coyoneda</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>  <span class="kw">where</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Map</span> <span class="ot">:</span> {<span class="dv">0</span> a <span class="ot">:</span> <span class="fu">_</span>} <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> b) <span class="ot">-&gt;</span> f a <span class="ot">-&gt;</span> <span class="dt">Coyoneda</span> f b</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="co">-- map :             (a -&gt; b) -&gt; f a -&gt;          f b</span></span></code></pre></div>
+<p>In other words, Coyoneda is to functors as SemiringLayer is to
+semirings - it's a data type that holds the contents of a functorial
+map, the same way that SemiringLayer holds values of some semiring. Like
+SemiringLayer, Coyoneda comes with its own notion of algebra, and we
+will make this precise in a futre blog post.</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- When `f` is a functor, we can tear down a layer of Coyoneda</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mapCoyo</span> <span class="ot">:</span> <span class="dt">Functor</span> f <span class="ot">=&gt;</span> <span class="dt">Coyoneda</span> f b <span class="ot">-&gt;</span> f b </span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>mapCoyo (<span class="dt">Map</span> f fa) <span class="fu">=</span> map f fa </span></code></pre></div>
+<p>Using this trick, we can modify our generic evaluator to no longer
+need a functor constraint:</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mcata</span> <span class="ot">:</span> <span class="dt">Algebra</span> (<span class="dt">Coyoneda</span> f) c <span class="ot">-&gt;</span> <span class="dt">Fix</span> f <span class="ot">-&gt;</span> c</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>mcata alg (<span class="dt">In</span> op) <span class="fu">=</span> alg (<span class="dt">Map</span> (mcata alg) op)</span></code></pre></div>
+<p>The <code>m</code> in <code>mcata</code> stands for
+<code>Mendler</code>, and <code>Algebra (Coyoneda f) a</code> is
+commonly known as a <code>Mendler Algebra</code>.</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="dt">MAlgebra</span> <span class="ot">:</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> (<span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="dt">MAlgebra</span> f a <span class="fu">=</span> <span class="dt">Algebra</span> (<span class="dt">Coyoneda</span> f) a </span></code></pre></div>
+<p>Kmett wrote a <a
+href="https://www.schoolofhaskell.com/user/edwardk/recursion-schemes/catamorphisms">great
+post about catamorphisms and Mendler catamorphisms</a>, and it includes
+how to go from <code>cata</code> to <code>mcata</code> and vice
+versa.</p>
+<h2 id="algebra-transformers">Algebra Transformers</h2>
+<p>The downside of using Mendler-style recursion schemes is that our
+algebras become a tad more involved. Compare the following:</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- monoid of natural numbers, standard algebra style</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">algPlus</span> <span class="ot">:</span> <span class="dt">Algebra</span> (<span class="dt">ListLayer</span> <span class="dt">Nat</span>) <span class="dt">Nat</span> </span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>algPlus [] <span class="fu">=</span> <span class="dv">0</span> </span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>algPlus (<span class="dt">Cons</span> x y) <span class="fu">=</span> x <span class="fu">+</span> y</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- monoid of natural numbers, Mendler style</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="fu">malgPlus</span> <span class="ot">:</span> <span class="dt">MAlgebra</span> (<span class="dt">ListLayer</span> <span class="dt">Nat</span>) <span class="dt">Nat</span> </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>malgPlus (<span class="dt">Map</span> f []) <span class="fu">=</span> <span class="dv">0</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>malgPlus (<span class="dt">Map</span> f (<span class="dt">Cons</span> x y)) <span class="fu">=</span> x <span class="fu">+</span> f y</span></code></pre></div>
+<p>Whereas a normal algebra merely accesses the values of each
+constructor, a Mendler algebra carries around an extra function that we
+need to apply before accessing sub-expressions.</p>
+<p>One way around this is to use algebra transformers, ie. a way to turn
+a simple algebra into a more complex one. In this case, we can derive a
+Mendler algebra from a standard one:</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">malgToAlg</span> <span class="ot">:</span> <span class="dt">Algebra</span> (<span class="dt">ListLayer</span> v) a <span class="ot">-&gt;</span> <span class="dt">MAlgebra</span> (<span class="dt">ListLayer</span> v) a</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>malgToAlg alg (<span class="dt">Map</span> f []) <span class="fu">=</span> alg []</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>malgToAlg alg (<span class="dt">Map</span> f (<span class="dt">Cons</span> x y)) <span class="fu">=</span> alg (<span class="dt">Cons</span> x (f y)) </span></code></pre></div>
+<p>We can now use standard algebras with <code>mcata</code>, as if they
+were Mendler algebras:</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode idris"><code class="sourceCode idris"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">listEval&#39;</span> <span class="ot">:</span> <span class="dt">Algebra</span> (<span class="dt">ListLayer</span> v) a <span class="ot">-&gt;</span> <span class="dt">Fix</span> (<span class="dt">ListLayer</span> v) <span class="ot">-&gt;</span> a </span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>listEval&#39; alg <span class="fu">=</span> mcata (malgToAlg alg)</span></code></pre></div>
+<p>What's interesting is that if we look at <code>malgToAlg</code>
+closely, we'll see that it's nothing other than an inside out functor
+interface for ListLayer. So in the end we did about the same amount of
+work as before, but at least with Mendler algebras we could choose when
+to do it, and we were not forced to write all of our interfaces up
+front.</p>
+<p>If we had macros at our disposal, we could actually derive malgToAlg
+automatically. And... well, now I actually wish that I had macros at my
+disposal here. (Or at least that I had a working knowledge of <a
+href="https://github.com/stefan-hoeck/idris2-elab-util/blob/main/src/Doc/Index.md">elaborator
+reflection</a>, which could accomplish the same thing).</p>
+<p>At this point, we might wonder if going through Mendler algebras is
+worth it if they are equally expressive to standard algebras. As we will
+soon see, the answer is yes, as a small generalisation to Mendler
+algebras - leading to what I call "Kan algebras" - will give us a vast
+amount of expressive power that can capture many datatypes of interest
+besides those representable as functors on sets.</p>
+<p>But before we get to that, let us talk about monads.</p>
+
+        <br>
+        <br>
+
+        <!--Share buttons-->
+        <div class="social-buttons">
+            <a href="https://twitter.com/share" class="twitter-share-button"
+                                                data-url="https://zanzix.github.io" data-text="Check out: Introduction to Recursion Schemes with Idris - " data-via="tangled_zans">Tweet</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <a href="https://twitter.com/tangled_zans" class="twitter-follow-button" data-show-count="false" data-dnt="true">Follow @tangled_zans</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
+        </div>
+</article>
+
+</div>
+
+<footer>
+    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+</footer>
+
+<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<script src="/js/main.js"></script>
+</body>
+</html>

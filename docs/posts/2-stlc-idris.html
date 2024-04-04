@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:fb="http://ogp.me/ns/fb#">
+<head profile="http://www.w3.org/2005/10/profile">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6WEVP6B3NL"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-6WEVP6B3NL');
+    </script>    
+    <meta property="og:image" content="/images/small-bibby.png" />
+    <meta charset="UTF-8">
+    <meta name="description" content="Some personal notes turned into a blog">
+    <meta name="author" content="Zanzi">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tangled_zans">
+<meta name="twitter:creator" content="@tangled_zans">
+<meta name="twitter:title" content="From Lambda Calculus to Bicartesian Closed Categories">
+    <meta name="twitter:description" content="Converting the simply typed lambda calculus into typed combinators">
+    <meta name="twitter:image" content="https://zanzix.github.io/images/">
+    <title>From Lambda Calculus to Bicartesian Closed Categories</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a id="beacon" href="/">
+                <div id="home-text"> HOME </div>
+            </a>
+        </nav>
+    
+        <div class="right-sidebar">
+    
+            <a class="ext-link" href="https://twitter.com/tangled_zans">
+            <img src="/images/twitter-logo.png" alt="Twitter Profile"/>
+        </a>
+        <a class="ext-link" rel="me" href="https://mathstodon.xyz/@zanzi">
+                <img src="/images/mastodon-logo.svg" alt="Mastodon Profile"/>
+              </a>        
+        <div id="theme-button">DAY</div>
+        </div>
+    </header>
+
+<div id="page">
+    <div class="wrapper">
+        <div class="masthead">
+            <span class="title">
+                From Lambda Calculus to Bicartesian Closed Categories
+            </span>
+            <br>
+
+            <img class="post-image" src="/images/bibby-alone.png">
+            <br>
+            <span class="byline">by Zanzi</span>
+            <br>
+            <span class="date">Sep 23, 2023</span>
+            <br>
+            <div class="metadata">
+            </div>
+            <div class="tags">
+            </div>
+        </div>
+    </div>
+    <article class="post">
+        <h2 id="introduction">Introduction</h2>
+<p>In the <a href="/posts/bcc">previous post</a> we've defined a typed
+combinator language for bicartesian closed categories. In this post, we
+will define the Simply Typed Lambda Calculus and translate it into our
+combinator language.</p>
+<p>The reason why we'd want to do this is that while combinators allow
+us to work with the primitives of some categorical structure, they make
+for a very austere programming language - one with no variables or
+binding. So while it's possible to program entirely in combinators, we
+would be limiting ourselves to writing point-free programs. Instead, we
+will write our programs in the STLC and compile the code into
+combinators.</p>
+<p>But while the translation from lambda terms to closed cartesian
+categories is standard, there is a slight impedance mismatch between
+variable contexts and products that we will encounter again and again.
+So in addition to showing the translation itself, the goal of this blog
+post is to start introducing the idea of categories with a first-class
+notion of context, aka multicategories.</p>
+<h2 id="types">Types</h2>
+<p>Just as before, we start by defining a type for our STLC types, as
+well as infix type synonyms for each type constructor.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Ty</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Unit</span> <span class="ot">:</span> <span class="dt">Ty</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Prod</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Sum</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Exp</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">N</span> <span class="ot">:</span> <span class="dt">Ty</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="fu">~&gt;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">(~&gt;)</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>(<span class="fu">~&gt;</span>) <span class="fu">=</span> <span class="dt">Exp</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="ot">:</span><span class="fu">*:</span> </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">(:*:)</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>(<span class="ot">:</span><span class="fu">*:</span>) <span class="fu">=</span> <span class="dt">Prod</span> </span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="ot">:</span><span class="fu">+:</span> </span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">(:+:)</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>(<span class="ot">:</span><span class="fu">+:</span>) <span class="fu">=</span> <span class="dt">Sum</span> </span></code></pre></div>
+<p>As we can see, the types stay the same as before. In fact, looking at
+the STLC and our <a href="/posts/bcc">combinator language</a> side by
+side reveals that a lot of structure is carried over with little
+modification.</p>
+<p>Let's start by looking at the core language, and then add the rest of
+the constructors.</p>
+<h2 id="core-language">Core language</h2>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Terms of the Simply Typed Lambda Calculus</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Term</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Variables </span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Var</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Elem</span> a g <span class="ot">-&gt;</span> <span class="dt">Term</span> g a</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Primitives</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Prim</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Prims</span> g a <span class="ot">-&gt;</span> <span class="dt">Term</span> g a </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Lambda abstraction</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Lam</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> (a<span class="ot">::</span>g) b <span class="ot">-&gt;</span> <span class="dt">Term</span> g (a <span class="fu">~&gt;</span> b)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Lambda application</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">App</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> g (a <span class="fu">~&gt;</span> b) <span class="ot">-&gt;</span> <span class="dt">Term</span> g a <span class="ot">-&gt;</span> <span class="dt">Term</span> g b</span></code></pre></div>
+<p>The first thing we notice is that our type signature has changed.
+While combinators take a single input to a single output
+<code>Ty -&gt; Ty -&gt; Type</code>, we are now working with a list of
+inputs - aka our variable context - which is then taken to an output
+<code>List Ty -&gt; Ty -&gt; Type</code>. Since we will use the latter
+type a lot, we'll define a type synonym for it, and call it a
+multigraph.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Graph</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Graph</span> obj <span class="fu">=</span> obj <span class="ot">-&gt;</span> obj <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="dt">Multigraph</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="dt">Multigraph</span> obj <span class="fu">=</span> <span class="dt">List</span> obj <span class="ot">-&gt;</span> obj <span class="ot">-&gt;</span> <span class="dt">Type</span> </span></code></pre></div>
+<p>Since we now have a list of inputs as opposed to a single input, we
+need some way of embedding variables into our variable context. This is
+done using the <code>Var</code> constructor. It kind of looks like the
+identity arrow from the combinator language if you squint, and indeed
+the correspondence would become a lot more precise if we were working
+with a linear lambda calculus:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Id</span>   <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>}                              <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="fu">_</span> a  a </span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">LVar</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>}                              <span class="ot">-&gt;</span> <span class="dt">Term</span>  [a] a</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="dt">Var</span>  <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Elem</span> a g <span class="ot">-&gt;</span> <span class="dt">Term</span>   g  a</span></code></pre></div>
+<p>So <code>Id</code> takes a single input to a single output,
+<code>Var</code> embeds a variable into a larger context, while
+<code>LVar</code> embeds the variable into a singleton context. From
+this we can see the difference between linear and cartesian variables -
+cartesian variables can be projected out of a larger context, ignoring
+the rest, while linear variables must be used without anything else
+remaining.</p>
+<p>Here <a
+href="https://www.idris-lang.org/docs/idris2/current/base_docs/docs/Data.List.Elem.html">Elem</a>
+is taken from the Idris standard library, it's kind of proof-relevant
+membership relation, which guarantees that the variable <code>a</code>
+will be inside of the larger context <code>g</code>.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Elem</span> <span class="ot">:</span> a <span class="ot">-&gt;</span> <span class="dt">List</span> a <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">||| A proof that the element is at the head of the list</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Here</span> <span class="ot">:</span> <span class="dt">Elem</span> x (x <span class="ot">::</span> xs)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">||| A proof that the element is in the tail of the list</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">There</span> <span class="ot">:</span> <span class="dt">Elem</span> x xs <span class="ot">-&gt;</span> <span class="dt">Elem</span> x (y <span class="ot">::</span> xs)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- Find the variable corresponding to Elem t g, from an environment Env g</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">lookup</span> <span class="ot">:</span> <span class="dt">Elem</span> t g <span class="ot">-&gt;</span> <span class="dt">Env</span> g <span class="ot">-&gt;</span> evalTy t</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>lookup <span class="dt">Here</span> (x <span class="ot">::</span><span class="fu">-</span> xs) <span class="fu">=</span> x </span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>lookup (<span class="dt">There</span> t) (y <span class="ot">::</span><span class="fu">-</span> xs) <span class="fu">=</span> lookup t xs </span></code></pre></div>
+<p>We can also see that lambda abstraction looks kind of like currying,
+but flipped. If we were to work with Snoc-lists instead of Cons-lists
+then we would see the correspondence between the two constructors a lot
+clearer:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Snoc List</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">SList</span> a <span class="fu">=</span> <span class="dt">Lin</span> <span class="fu">|</span> <span class="dt">Snoc</span> (<span class="dt">SList</span> a) a</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="fu">-:</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">(-:)</span> <span class="ot">:</span> <span class="dt">SList</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">SList</span> a </span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>(<span class="fu">-:</span>) <span class="fu">=</span> <span class="dt">Snoc</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="dt">Lam</span>   <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">SList</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span>   (g  <span class="fu">-:</span> a) b <span class="ot">-&gt;</span> <span class="dt">Term</span>   g (a <span class="fu">~&gt;</span> b)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="dt">Curry</span> <span class="ot">:</span> {c <span class="ot">:</span>       <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="fu">_</span> (c <span class="ot">:</span><span class="fu">*:</span> a) b <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="fu">_</span> c (a <span class="fu">~&gt;</span> b)</span></code></pre></div>
+<p>We can see that the two line-up very closely, except that Curry takes
+as an input a morphism from a tuple <code>(c :*: a)</code>, while Lam
+takes as an input a term with the context <code>g -: a</code>. Lambda
+abstraction then takes the free variable <code>a</code>, and binds it
+inside the function <code>(a ~&gt; b)</code>. So in a way, a context is
+just a convenient representation for an n-ary tuple.</p>
+<p>Unfortunately, while the Snoc-list representation makes working with
+lambda abstraction much easier, it will complicate working with the rest
+of our binding operators, so we will not be using it in the full
+language.</p>
+<p>We've also split Apply into multiple terms. Whereas previously the
+entire operation was expressed as a single combinator, we are now
+defining it as a meta-operation on terms, each with their own
+context:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">App</span>   <span class="ot">:</span> <span class="dt">Term</span>   g  (a <span class="fu">~&gt;</span> b) <span class="ot">-&gt;</span> <span class="dt">Term</span> g a <span class="ot">-&gt;</span> <span class="dt">Term</span> g b</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="dt">Apply</span> <span class="ot">:</span> <span class="dt">Comb</span> <span class="fu">_</span>   ((a <span class="fu">~&gt;</span> b) <span class="ot">:</span><span class="fu">*:</span>       a)          b</span></code></pre></div>
+<p>This will be a recurring pattern in the translation, and many other
+combinators will be split this way.</p>
+<h2 id="primitives">Primitives</h2>
+<p>We can also see that just as we've changed the type of our term
+language to be a multigraph, we've done the same to our primitives
+<code>Prims : List Ty -&gt; Ty -&gt; Type</code>. Similar to Lam, each
+primitive will take a number of variables from the context and bind them
+to a primitive expression.</p>
+<p>Let's define some primitives. Just like before, we'd like to work
+with the generators of a monoid. There are a few choices of
+representation that we can take here, depending on how we want our
+primitives to interact with the context.</p>
+<p>The easiest thing to do would be to say that our generators take a
+number of variables from some larger context, and leave the rest of the
+context unchanged, implicitly discarding it. The unit of the monoid
+takes no variables from the context <code>g</code>, and leaves the
+entire thing unchanged, while the multiplication takes two variables
+<code>N :: N :: g</code>, and leaves the rest.</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Primitives with &quot;cartesian&quot; contexts</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">CPrims</span> <span class="ot">:</span> <span class="dt">Multigraph</span> <span class="dt">Ty</span> <span class="kw">where</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">CZ</span> <span class="ot">:</span> <span class="dt">CPrims</span> g <span class="dt">N</span>  </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">CMult</span> <span class="ot">:</span> <span class="dt">CPrims</span> (<span class="dt">N</span> <span class="ot">::</span> <span class="dt">N</span> <span class="ot">::</span> g) <span class="dt">N</span></span></code></pre></div>
+<p>This would be convenient to program with, since we could embed our
+primitives inside terms with an arbitrary context.</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ex</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> g (<span class="dt">N</span> <span class="fu">~&gt;</span> (<span class="dt">N</span> <span class="fu">~&gt;</span> <span class="dt">N</span>)) </span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>ex <span class="fu">=</span> <span class="dt">Lam</span> (<span class="dt">Lam</span> (<span class="dt">Prim</span> <span class="dt">CMult</span>)) </span></code></pre></div>
+<p>Unfortunately - as we will see below - this would make the
+translation to combinators a lot more cumbersome. So instead, we will
+use primitives with a more careful context discipline, only admitting
+contexts with the exact number of variables that will be used.</p>
+<p>So the monoid unit will require an empty context <code>[]</code>,
+which is equivalent to a morphism from the unit object, and the monoid
+multiplication will use a context with exactly two free variables, which
+is equivalent to a morphism from a tuple. This will make the translation
+to the set of primitives from the last post almost trivial. Almost.</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Primitives with &quot;linear&quot; contexts</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">LinPrims</span> <span class="ot">:</span> <span class="dt">Multigraph</span> <span class="dt">Ty</span> <span class="kw">where</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">LZ</span> <span class="ot">:</span> <span class="dt">LinPrims</span> [] <span class="dt">N</span> </span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">LMult</span> <span class="ot">:</span> <span class="dt">LinPrims</span> [<span class="dt">N</span>, <span class="dt">N</span>] <span class="dt">N</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- the context needs to be empty, or the expression won&#39;t type-check</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ex&#39;</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> <span class="dt">Nil</span> (<span class="dt">N</span> <span class="fu">~&gt;</span> (<span class="dt">N</span> <span class="fu">~&gt;</span> <span class="dt">N</span>)) </span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>ex&#39; <span class="fu">=</span> <span class="dt">Lam</span> (<span class="dt">Lam</span> (<span class="dt">Prim</span> <span class="dt">LMult</span>)) </span></code></pre></div>
+<p>Alternatively, we could have defined our set of primitives within the
+language itself:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">STLC</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ... stlc constructors</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">E</span> <span class="ot">:</span> <span class="dt">STLC</span> g <span class="dt">N</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Mult</span> <span class="ot">:</span> <span class="dt">STLC</span> g <span class="dt">N</span> <span class="ot">-&gt;</span> <span class="dt">STLC</span> g <span class="dt">N</span> <span class="ot">-&gt;</span> <span class="dt">STLC</span> g <span class="dt">N</span></span></code></pre></div>
+<p>But this would not maintain the clean separation between the
+primitives and the terms built on top of them, like we did in our
+combinator language.</p>
+<p>Our presentation also gives us an insight into a more subtle
+relationship between lambda terms and combinators - combinators are
+defined over an underlying graph, while terms are defined over an
+underlying multigraph.</p>
+<h2 id="stlc-with-products-and-sums">STLC with Products and Sums</h2>
+<p>Having looked at the core language, let's now turn our attention to
+the full language:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Term</span> <span class="ot">:</span> <span class="dt">Multigraph</span> <span class="dt">Ty</span> <span class="kw">where</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Variables </span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Var</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Elem</span> a g <span class="ot">-&gt;</span> <span class="dt">Term</span> g a</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Primitives</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">LPrim</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">LPrims</span> g a <span class="ot">-&gt;</span> <span class="dt">Term</span> g a </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Lambda abstraction: (a::g → b) → (g → (a ⇨ b))</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Lam</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> (a<span class="ot">::</span>g) b <span class="ot">-&gt;</span> <span class="dt">Term</span> g (a <span class="fu">~&gt;</span> b)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Lambda application: (g → (a ~&gt; b)) → (g → a) → (g → a)</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">App</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> </span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Term</span> g (a <span class="fu">~&gt;</span> b) <span class="ot">-&gt;</span> <span class="dt">Term</span> g a <span class="ot">-&gt;</span> <span class="dt">Term</span> g b</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- First projection: (g → (a * b)) → (g → a)</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Fst</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> g (<span class="dt">Prod</span> a b) <span class="ot">-&gt;</span> <span class="dt">Term</span> g a</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Second projection: (g → (a * b)) → (g → b)</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Snd</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> g (<span class="dt">Prod</span> a b) <span class="ot">-&gt;</span> <span class="dt">Term</span> g b</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Product introduction: (g → a) → (g → b) → (g → (a * b))</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Pair</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} </span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> <span class="dt">Term</span> g a <span class="ot">-&gt;</span> <span class="dt">Term</span> g b <span class="ot">-&gt;</span> <span class="dt">Term</span> g (<span class="dt">Prod</span> a b)</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Left injection: (g → a) → (g → a + b)</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  <span class="dt">InL</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> g a <span class="ot">-&gt;</span> <span class="dt">Term</span> g (<span class="dt">Sum</span> a b)</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Right injection: (g → b) → (g → a + b)</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>  <span class="dt">InR</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> g b <span class="ot">-&gt;</span> <span class="dt">Term</span> g (<span class="dt">Sum</span> a b)</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Case matching: (g → a + b) → (a::g → c) → (b::g → c) → (g → c)</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Case</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> </span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Term</span> g (<span class="dt">Sum</span> a b) <span class="ot">-&gt;</span> <span class="dt">Term</span> (a<span class="ot">::</span>g) c <span class="ot">-&gt;</span> <span class="dt">Term</span> (b<span class="ot">::</span>g) c <span class="ot">-&gt;</span> <span class="dt">Term</span> g c</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Let binding: (g → s) → (s::g → t) → (g → t)</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Let</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {s <span class="ot">:</span> <span class="dt">Ty</span>} </span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>    <span class="ot">-&gt;</span> <span class="dt">Term</span> g s <span class="ot">-&gt;</span> <span class="dt">Term</span> (s<span class="ot">::</span>g) t <span class="ot">-&gt;</span> <span class="dt">Term</span> g t</span></code></pre></div>
+<p>We can see that just as with the core language, the new connectives
+fall into two categories - they either interact with the context, such
+as Case and Let, or they do not.</p>
+<h2 id="let-is-all-you-need">Let is all you need</h2>
+<p><code>Let</code> is often seen as redundant since it can be defined
+using <code>Lam</code>, but doing so is only valid in a category with
+exponentials. While this is obviously true in our full language, our
+goal is to mix-and-match the syntax as needed. So keeping the Let
+operator will allow us to retain the ability to bind variables even if
+we move to a subset of the language without lambda abstraction.</p>
+<p>In fact, if we look closely at the Let connective, we'll notice that
+it's possible to work in a language with <em>nothing but</em> variables
+and Let.</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Let</span>         <span class="ot">:</span> <span class="dt">Term</span>    g s <span class="ot">-&gt;</span> <span class="dt">Term</span>   (s <span class="ot">::</span> g) t <span class="ot">-&gt;</span> <span class="dt">Term</span>   g t</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>(flip <span class="dt">Comp</span>) <span class="ot">:</span> <span class="dt">Comb</span> <span class="fu">_</span>  c s <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="fu">_</span>  s       t <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="fu">_</span> c t</span></code></pre></div>
+<p>So <code>Let</code> is nothing other than composition! Or to be more
+precise, it's a notion of composition for morphisms that contain
+variable contexts. We will call these 'multi-morphisms'. Meanwhile, the
+constructor for linear variables <code>LVar</code> that we've seen
+earlier is a notion of an identity arrow for multi-morphisms.</p>
+<p>Taking this a step further, we can see a correspondence between a
+free category on a graph, and a free "multicategory" on a
+multigraph.</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Free category over a graph &#39;g&#39;.</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Cat</span> <span class="ot">:</span> {obj <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">Graph</span> obj <span class="ot">-&gt;</span> <span class="dt">Graph</span> obj <span class="kw">where</span> </span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Id</span> <span class="ot">:</span> {a <span class="ot">:</span> obj} <span class="ot">-&gt;</span> <span class="dt">Cat</span> g a a </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Cons</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> obj} <span class="ot">-&gt;</span> g b c <span class="ot">-&gt;</span> <span class="dt">Cat</span> g a b <span class="ot">-&gt;</span> <span class="dt">Cat</span> g a c </span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- Free multicategory over the multigraph &#39;m&#39;.</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Multicat</span> <span class="ot">:</span> {obj <span class="ot">:</span> <span class="dt">Type</span>} <span class="ot">-&gt;</span> <span class="dt">Multigraph</span> obj <span class="ot">-&gt;</span> <span class="dt">Multigraph</span> obj <span class="kw">where</span> </span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">LVar</span> <span class="ot">:</span> {a <span class="ot">:</span> obj} <span class="ot">-&gt;</span> <span class="dt">Multicat</span> m [a] a</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Let</span> <span class="ot">:</span> {ctx <span class="ot">:</span> <span class="dt">List</span> obj} <span class="ot">-&gt;</span> {s, t <span class="ot">:</span> obj} <span class="ot">-&gt;</span> </span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    m ctx s <span class="ot">-&gt;</span> <span class="dt">Multicat</span> m (s <span class="ot">::</span> ctx) t <span class="ot">-&gt;</span> <span class="dt">Multicat</span> m ctx t</span></code></pre></div>
+<p>(Strictly speaking, this is a cartesian multicategory, since the
+context 'ctx' is shared between terms).</p>
+<p>But this is getting ahead of ourselves. We will talk about
+multicategories - including non-cartesian ones - in much more detail
+later, but for now let's get back to the lambda calculus.</p>
+<h2 id="translation-into-idris">Translation into Idris</h2>
+<p>Having defined our term language, let's start by translating it into
+Idris' types and functions, after which we will do a more general
+translation into combinators.</p>
+<p>As always, we start by translating the types. This stays exactly as
+in our last post:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalTy</span> <span class="ot">:</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>evalTy <span class="dt">Unit</span> <span class="fu">=</span> <span class="dt">Unit</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>evalTy <span class="dt">N</span> <span class="fu">=</span> <span class="dt">Nat</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Exp</span> t1 t2) <span class="fu">=</span> (evalTy t1) <span class="ot">-&gt;</span> (evalTy t2)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Prod</span> t1 t2) <span class="fu">=</span> (evalTy t1, evalTy t2)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>evalTy (<span class="dt">Sum</span> t1 t2) <span class="fu">=</span> <span class="dt">Either</span> (evalTy t1) (evalTy t2) </span></code></pre></div>
+<p>Next we would like to translate the primitives, however here we face
+our first complication. Previously our evaluator converted a primitive
+into a function from one input to one output:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalPrims</span> <span class="ot">:</span> <span class="dt">Prims</span> ty1 ty2 <span class="ot">-&gt;</span> <span class="dt">Idr</span> (evalTy ty1) (evalTy ty2)</span></code></pre></div>
+<p>Now we would like to define a function from multiple inputs to an
+output:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalPrims</span> <span class="ot">:</span> <span class="dt">Prims</span> g ty <span class="ot">-&gt;</span> (<span class="dt">Idr</span> (<span class="ot">?evalCtx</span> g) (evalTy t))</span></code></pre></div>
+<p>How should we represent these multi-input functions? We can think of
+n-ary functions as functions out of an environment, represented as a
+heterogeneous list of values.</p>
+<p>We will use the following representation of our environment. We can
+think of it as a list of values <code>(evalTy t)</code> indexed by our
+context <code>List Ty</code>.</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Cons list, extends environment from the left</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="kw">infixr</span> <span class="dv">5</span> <span class="ot">::</span><span class="fu">-</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Env</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">CNil</span>  <span class="ot">:</span> <span class="dt">Env</span> <span class="dt">Nil</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">(::-)</span> <span class="ot">:</span> evalTy t <span class="ot">-&gt;</span> <span class="dt">Env</span> g <span class="ot">-&gt;</span> <span class="dt">Env</span> (t <span class="ot">::</span> g)</span></code></pre></div>
+<p>Contrast it to the definition of a list:</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">List</span> <span class="ot">:</span> <span class="dt">Type</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> </span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Nil</span> <span class="ot">:</span> <span class="dt">List</span> a </span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Cons</span> <span class="ot">:</span> t <span class="ot">-&gt;</span> <span class="dt">List</span> t <span class="ot">-&gt;</span> <span class="dt">List</span> t</span></code></pre></div>
+<p>We can think of an environment as a kind of "heterogenous list of
+values indexed by a list of types of those values".</p>
+<p>We will instantiate our monoid as the monoid of natural numbers
+<code>Nat</code>. Then our evaluator for primitives becomes as follows.
+The monoidal unit does not interact with the environment, creating a 0
+out of nothing. The monoidal multiplication pops two natural numbers
+from the environment and adds them.</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evalPrims</span> <span class="ot">:</span> <span class="dt">LPrims</span> g t <span class="ot">-&gt;</span> <span class="dt">Idr</span> (<span class="dt">Env</span> g) (evalTy t)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>evalPrims <span class="dt">E</span> <span class="dt">CNil</span> <span class="fu">=</span> <span class="dv">0</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>evalPrims <span class="dt">Mult</span> (m1 <span class="ot">::</span><span class="fu">-</span> m2 <span class="ot">::</span><span class="fu">-</span> <span class="dt">CNil</span>) <span class="fu">=</span> m1 <span class="fu">+</span> m2</span></code></pre></div>
+<p>Combining the above, we get our evaluator that takes terms to n-ary
+Idris functions. If you compare it to our BCC evaluator from before,
+then not a lot changes - the constructors that don't interact with the
+context remain almost the same. The constructors that do interact with
+the environment - Lam, Case, Let - all involve extending the environment
+with a new variable, which then gets bound and used within the
+expression.</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">eval</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> g t <span class="ot">-&gt;</span> <span class="dt">Idr</span> (<span class="dt">Env</span> g) (evalTy t)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Var</span> v) env <span class="fu">=</span> lookup v env</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">LPrim</span> e) env <span class="fu">=</span> evalPrims e env</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Lam</span> t) env <span class="fu">=</span> <span class="fu">\</span>x <span class="ot">=&gt;</span> eval t (x <span class="ot">::</span><span class="fu">-</span> env)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">App</span> t1 t2) env <span class="fu">=</span> (eval t1 env) (eval t2 env)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Pair</span> t1 t2) env <span class="fu">=</span> (eval t1 env, eval t2 env)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Fst</span> t) env <span class="fu">=</span> fst (eval t env)</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Snd</span> t) env <span class="fu">=</span> snd (eval t env)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Let</span> t c) env <span class="fu">=</span> eval c ((eval t env) <span class="ot">::</span><span class="fu">-</span> env)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">InL</span> t) env <span class="fu">=</span> <span class="dt">Left</span> (eval t env) </span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">InR</span> t) env <span class="fu">=</span> <span class="dt">Right</span> (eval t env) </span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>eval (<span class="dt">Case</span> t1 t2 t3) env <span class="fu">=</span> <span class="kw">case</span> eval t1 env <span class="kw">of</span> </span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Left</span> l <span class="ot">=&gt;</span> eval t2 (l <span class="ot">::</span><span class="fu">-</span> env)</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Right</span> r <span class="ot">=&gt;</span> eval t3 (r <span class="ot">::</span><span class="fu">-</span> env)</span></code></pre></div>
+<p>Finally, we would like to translate our lambda calculus into
+bicartesian closed categories. Generalising from Idris functions, our
+goal looks something like</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">eval</span> <span class="ot">:</span> (bcc <span class="ot">:</span> <span class="dt">BCC</span> g) <span class="ot">-&gt;</span> <span class="dt">Term</span> g ty <span class="ot">-&gt;</span> bcc (<span class="dt">Env</span> g) (evalTy t)</span></code></pre></div>
+<p>However, our environment Env is defined for Idris types, so we would
+need to generalise it. So what we'll do is interpret our context of
+types into a product of types, with the empty list being represented by
+the Unit type.</p>
+<p>At first glance, we might want to simply fold over our context:</p>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ctxF</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>ctxF tys <span class="fu">=</span> foldr <span class="dt">Prod</span> <span class="dt">Unit</span> tys</span></code></pre></div>
+<p>However, this would create awkward-looking types such as
+<code>(Prod a (Prod b) Unit)</code>. So a more nicer alternative would
+be to convert the empty List into Unit, but not use that as a base case,
+and instead treat the embedding <code>[a]</code> of a type into a list
+as the base case instead. This would give us nicer-looking types without
+trailing units at the end.</p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ctxEv</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="ot">-&gt;</span> <span class="dt">Ty</span> </span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>ctxEv <span class="dt">Nil</span> <span class="fu">=</span> <span class="dt">Unit</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>ctxEv [t] <span class="fu">=</span> t</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>ctxEv (t<span class="ot">::</span>ts) <span class="fu">=</span> <span class="dt">Prod</span> t (ctxEv ts)</span></code></pre></div>
+<p>Using this evaluator, our translation between primitives would be
+trivial.</p>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Translating from LPrims to Typed.Prims</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">evalPrim</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">LPrims</span> g t <span class="ot">-&gt;</span> <span class="dt">Prims</span> (ctxEv g) t </span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>evalPrim <span class="dt">LZ</span> <span class="fu">=</span> <span class="dt">Typed</span><span class="fu">.</span><span class="dt">Z</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>evalPrim <span class="dt">LMult</span> <span class="fu">=</span> <span class="dt">Typed</span><span class="fu">.</span><span class="dt">Mult</span></span></code></pre></div>
+<p>Unfortunately, using this much nicer evaluator would complicate type
+unification immensely, and make the translation much harder to write. So
+we will use the messier fold instead and just put up with trailing
+units.</p>
+<p>This means that while the monoidal unit translates correctly to
+<code>Prims Unit N</code>, the monoidal multiplication becomes
+<code>Prims (Pair N (Pair N Unit)) N</code>. We could fix this by using
+the structural rules of the combinator language to rearrange the
+expression and drop the trailing Unit, but this means that we need to
+first embed our primitives into the combinator language, rather than
+translating between two sets of primitives directly.</p>
+<p>First, let's add some new structural rules to the combinator
+language.</p>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Syntactic sugar for composing arrows:</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">(&gt;&gt;&gt;)</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Comb</span> k a b <span class="ot">-&gt;</span> <span class="dt">Comb</span> k b c <span class="ot">-&gt;</span> <span class="dt">Comb</span> k a c</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>(<span class="fu">&gt;&gt;&gt;</span>) f g <span class="fu">=</span> <span class="dt">Comp</span> g f</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="co">-- | New Combinators</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- Bifunctor for products</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a><span class="dt">BifP</span> <span class="ot">:</span> {a, b, c, d <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> </span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Comb</span> k a c <span class="ot">-&gt;</span> <span class="dt">Comb</span> k b d <span class="ot">-&gt;</span> <span class="dt">Comb</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) (c <span class="ot">:</span><span class="fu">*:</span> d)</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="co">-- Unit elimination</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a><span class="dt">UnitL</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Comb</span> g (a <span class="ot">:</span><span class="fu">*:</span> <span class="dt">Unit</span>) a</span></code></pre></div>
+<p>Now we can do the translation:</p>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Won&#39;t work without embedding into Comb</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">evalPrim</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">LPrims</span> g t <span class="ot">-&gt;</span> <span class="dt">Prims</span> (ctxF g) t</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>evalPrim <span class="dt">LZ</span> <span class="fu">=</span> <span class="dt">Typed</span><span class="fu">.</span><span class="dt">Z</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>evalPrim <span class="dt">LMult</span> <span class="fu">=</span> <span class="ot">?sadness</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- Works </span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="fu">evalPrimF</span> <span class="ot">:</span> {ctx <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">LPrims</span> ctx t <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="dt">Prims</span> (ctxF ctx) t</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>evalPrimF <span class="dt">LZ</span> <span class="fu">=</span> <span class="dt">Prim</span> <span class="dt">Typed</span><span class="fu">.</span><span class="dt">Z</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>evalPrimF <span class="dt">LMult</span> <span class="fu">=</span> <span class="dt">BifP</span> <span class="dt">Id</span> <span class="dt">UnitL</span> <span class="fu">&gt;&gt;&gt;</span> <span class="dt">Prim</span> <span class="dt">Typed</span><span class="fu">.</span><span class="dt">Mult</span> </span></code></pre></div>
+<p>Had we chosen to work with cartesian contexts instead, we would have
+needed to deal with the trailing context of unused variables. The
+monoidal unit would be <code>Prims (ctxF g) N</code>, with
+multiplication <code>Prims (Pair N (Pair N (ctxF g)))</code>. This would
+mean that for each primitive we'd have to zoom into the nested tuple and
+drop the remaining context by composing it with the terminal morphism:
+<code>Terminal : {a : Ty} -&gt; Comb k a Unit</code>.</p>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Works, but messy</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="fu">evalPrim&#39;</span> <span class="ot">:</span> {ctx <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">CPrims</span> ctx t <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="dt">Prims</span> (ctxF ctx) t </span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>evalPrim&#39; <span class="dt">CZ</span> <span class="fu">=</span> <span class="dt">Terminal</span> <span class="fu">&gt;&gt;&gt;</span> <span class="dt">Prim</span> <span class="dt">Typed</span><span class="fu">.</span><span class="dt">Z</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>evalPrim&#39; <span class="dt">CMult</span> <span class="fu">=</span> <span class="dt">BifP</span> <span class="dt">Id</span> <span class="dt">Fst</span> <span class="fu">&gt;&gt;&gt;</span> <span class="dt">Prim</span> <span class="dt">Typed</span><span class="fu">.</span><span class="dt">Mult</span></span></code></pre></div>
+<p>In addition to translating the primitives, we also want to translate
+variables. When working with contexts, a variable is an index into an
+environment, pointing at a specific value. When working with tuples, a
+variable is translated into a sequence of projections from a nested
+tuple.</p>
+<div class="sourceCode" id="cb29"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="ot">:</span> {g <span class="ot">:</span> <span class="dt">Graph</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ctx <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ty <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> </span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Elem</span> ty ctx <span class="ot">-&gt;</span> <span class="dt">Comb</span> g (ctxF ctx) ty</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>var <span class="dt">Here</span> <span class="fu">=</span> <span class="dt">Fst</span> </span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>var (<span class="dt">There</span> t) <span class="fu">=</span> <span class="dt">Comp</span> (var t) <span class="dt">Snd</span></span></code></pre></div>
+<p>We're either taking the left-most component with Fst, or traversing
+the nested tuple with a sequence of Snd's.</p>
+<p>Finally, we get our evaluator from terms to combinators. Just like
+earlier, the only constructors that require special care are the ones
+that interact with the context. Usually these involve some manner of
+re-arrangement of nested tuples using the structural rules of
+bicartesian closed categories. For instance, had we used Snoc-lists, the
+evaluator for <code>Lam</code> would be trivial, but instead we will
+re-arrange the context a bit to make it work.</p>
+<p>First, we'll go back to our combinator language and add a few more
+structural combinators to make it work.</p>
+<div class="sourceCode" id="cb30"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- | New Combinators</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="co">-- Distributivity of sums over products</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="dt">Distrib</span> <span class="ot">:</span> {a, b, c <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Comb</span> k ((a <span class="ot">:</span><span class="fu">+:</span> b) <span class="ot">:</span><span class="fu">*:</span> c) ((a <span class="ot">:</span><span class="fu">*:</span> c) <span class="ot">:</span><span class="fu">+:</span> (b <span class="ot">:</span><span class="fu">*:</span> c)) </span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a><span class="co">-- Bifunctor for sums</span></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="dt">BifC</span> <span class="ot">:</span> {a, b, c, d <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> </span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Comb</span> k a c <span class="ot">-&gt;</span> <span class="dt">Comb</span> k b d <span class="ot">-&gt;</span> <span class="dt">Comb</span> k (a <span class="ot">:</span><span class="fu">+:</span> b) (c <span class="ot">:</span><span class="fu">+:</span> d)</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a><span class="co">-- Symmetry for products</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="dt">SwapP</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Comb</span> k (a <span class="ot">:</span><span class="fu">*:</span> b) (b <span class="ot">:</span><span class="fu">*:</span> a) </span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a><span class="co">-- Symmetry for sums</span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a><span class="dt">SwapC</span> <span class="ot">:</span> {a, b <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Comb</span> k (a <span class="ot">:</span><span class="fu">+:</span> b) (b <span class="ot">:</span><span class="fu">+:</span> a) </span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a><span class="co">-- Unit elimination</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a><span class="dt">UnitL</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Comb</span> g (a <span class="ot">:</span><span class="fu">*:</span> <span class="dt">Unit</span>) a</span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a><span class="co">-- Copy: (a → a * a)</span></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a><span class="dt">Copy</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Comb</span> g a (a <span class="ot">:</span><span class="fu">*:</span> a)</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a><span class="co">-- Cocopy: (a + a → a)</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a><span class="dt">Cocopy</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Comb</span> b (a <span class="ot">:</span><span class="fu">+:</span> a) a </span></code></pre></div>
+<p>Now we can do the translation itself. The most involved case is that
+of case matching, which I had <a href="https://julesh.com/">Jules</a>
+help me with. We have a morphism from the context into a sum, as well as
+two morphisms out of a product of a variable and the context. We need to
+combine them to get a morphism out of the context.</p>
+<pre><code>m1 : g -&gt; a + b 
+m2 : (a * g) -&gt; ty 
+m3 : (b * g) -&gt; ty 
+----------------------
+g -&gt; ty </code></pre>
+<p>As an Idris expression, it would look like this:</p>
+<div class="sourceCode" id="cb32"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">match</span> <span class="ot">:</span> (g <span class="ot">-&gt;</span> <span class="dt">Either</span> a b) <span class="ot">-&gt;</span> ((a, g) <span class="ot">-&gt;</span> t) <span class="ot">-&gt;</span> ((b, g) <span class="ot">-&gt;</span> t) <span class="ot">-&gt;</span> g <span class="ot">-&gt;</span> t </span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>match m1 m2 m3 g <span class="fu">=</span> <span class="kw">case</span> m1 g <span class="kw">of</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Left</span> a <span class="ot">=&gt;</span> m2 (a, g)</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Right</span> b <span class="ot">=&gt;</span> m3 (b, g)</span></code></pre></div>
+<p>Translating this into combinators, we will need the following
+sequence of transformations:</p>
+<div class="sourceCode" id="cb33"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- g -&gt; (g * g) -&gt; ((a + b) * g) ~= ((a * g) + (b * g)) -&gt; ty + ty -&gt; ty</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Case</span> t1 t2 t3) <span class="fu">=</span> <span class="dt">Copy</span> <span class="fu">&gt;&gt;&gt;</span> <span class="dt">BifP</span> (sem t1) <span class="dt">Id</span> <span class="fu">&gt;&gt;&gt;</span> </span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Distrib</span> <span class="fu">&gt;&gt;&gt;</span> <span class="dt">BifC</span> (sem t2) (sem t3) <span class="fu">&gt;&gt;&gt;</span> <span class="dt">Cocopy</span></span></code></pre></div>
+<p>Putting it all together, our compiler to combinators becomes the
+following:</p>
+<div class="sourceCode" id="cb34"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Translation into combinators</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sem</span> <span class="ot">:</span> {ctx <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ty <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> ctx ty <span class="ot">-&gt;</span> <span class="dt">Comb</span> <span class="dt">Prims</span> (ctxF ctx) ty</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Var</span> v) <span class="fu">=</span> var v</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">LPrim</span> e) <span class="fu">=</span> evalPrimF e</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Pair</span> t1 t2) <span class="fu">=</span> <span class="dt">ProdI</span> (sem t1) (sem t2)</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Snd</span> t) <span class="fu">=</span> sem t <span class="fu">&gt;&gt;&gt;</span> <span class="dt">Snd</span> </span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Fst</span> t) <span class="fu">=</span> sem t <span class="fu">&gt;&gt;&gt;</span> <span class="dt">Fst</span> </span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Lam</span> t) <span class="fu">=</span> <span class="kw">let</span> x <span class="fu">=</span> sem t <span class="kw">in</span> (<span class="dt">Curry</span> (<span class="dt">SwapP</span> <span class="fu">&gt;&gt;&gt;</span> x))  </span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">App</span> t1 t2) <span class="fu">=</span> (<span class="dt">ProdI</span> (sem t1) (sem t2)) <span class="fu">&gt;&gt;&gt;</span> <span class="dt">Apply</span>  </span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Let</span> t c) <span class="fu">=</span> <span class="kw">let</span> evc <span class="fu">=</span> sem (<span class="dt">Lam</span> c) </span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>                    evt <span class="fu">=</span> sem t <span class="kw">in</span> </span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>                      <span class="dt">ProdI</span> evc evt <span class="fu">&gt;&gt;&gt;</span> <span class="dt">Apply</span> </span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">InL</span> t) <span class="fu">=</span> sem t <span class="fu">&gt;&gt;&gt;</span> <span class="dt">InL</span>  </span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">InR</span> t) <span class="fu">=</span> sem t <span class="fu">&gt;&gt;&gt;</span> <span class="dt">InR</span></span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>sem (<span class="dt">Case</span> t1 t2 t3) <span class="fu">=</span> <span class="dt">Copy</span> <span class="fu">&gt;&gt;&gt;</span> <span class="dt">BifP</span> (sem t1) <span class="dt">Id</span> <span class="fu">&gt;&gt;&gt;</span> </span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Distrib</span> <span class="fu">&gt;&gt;&gt;</span> <span class="dt">BifC</span> (sem t2) (sem t3) <span class="fu">&gt;&gt;&gt;</span> <span class="dt">Cocopy</span></span></code></pre></div>
+<p>Composing this with the semantic interpreter from combinators to
+BCCs, we get:</p>
+<div class="sourceCode" id="cb35"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">interp</span> <span class="ot">:</span> {ctx <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> {ty <span class="ot">:</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> </span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  (b <span class="ot">:</span> <span class="dt">BCC</span> g) <span class="ot">-&gt;</span> <span class="dt">Term</span> ctx ty <span class="ot">-&gt;</span> g (b<span class="fu">.</span>ty (ctxToProd ctx)) (b<span class="fu">.</span>ty ty)</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>interp b t <span class="fu">=</span> eval&#39; b (sem t) </span></code></pre></div>
+<h2 id="conclusion">Conclusion</h2>
+<p>We have formulated a translation from the STLC into an arbitrary BCC.
+This was <em>mostly</em> painless, except for when it came to
+translating constructors that involve context manipulation. Even writing
+this blog post has fallen to the <del>80:20</del> <del>90:10</del> 95:5
+rule, with the majority of the code being straightforward except for the
+parts involving shuffling variables and binders.</p>
+<p>It's worth reflecting on <em>why</em> this is so difficult.
+Categories don't have a first-class notion of variable context or
+binding operations, so when we're translating from a calculus that does,
+we need some way of turning binders and variables into morphisms. Doing
+so, however, makes our semantics more awkward and verbose, and can lead
+to an explosion of code size.</p>
+<p>But what if there was another way? What if instead of translating
+into categorical combinators, we had a way of giving a semantics for the
+lambda calculus directly in terms of multicategories? Rather than
+dealing with the impedance mismatch between contexts and products, our
+semantics would be a homomorphism on the context, preserving its
+structure.</p>
+<p>This is what we will look at in the next few blog posts, and what
+will become one of the main themes of the series. And if the idea of
+working with multicategories sounds daunting, then don't worry, the next
+blog post will start at the very beginning - with fixpoints of functors
+and free monads.</p>
+
+        <br>
+        <br>
+
+        <!--Share buttons-->
+        <div class="social-buttons">
+            <a href="https://twitter.com/share" class="twitter-share-button"
+                                                data-url="https://zanzix.github.io" data-text="Check out: From Lambda Calculus to Bicartesian Closed Categories - " data-via="tangled_zans">Tweet</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <a href="https://twitter.com/tangled_zans" class="twitter-follow-button" data-show-count="false" data-dnt="true">Follow @tangled_zans</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
+        </div>
+</article>
+
+</div>
+
+<footer>
+    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+</footer>
+
+<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<script src="/js/main.js"></script>
+</body>
+</html>
