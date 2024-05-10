@@ -186,7 +186,7 @@ mutual
 It can get tedious writing all these functor constraints after a while. If we had macros, we could automate this, but once again we can get away without macros with the help of category theory - using what is known as the Coyoneda trick.
 
 ## The Coyoneda Trick 
-A lot has been written about the Yoneda lemma, and its dual cousin, Coyoneda. Personally, I find that it's one of those concepts that you don't so much "understand" as "get used to". And the best way to get used to something is to use it, which - luckily for us - we'll have plenty of opportunity to do so. 
+A lot has been written about the Yoneda lemma, and its dual cousin, Coyoneda. Personally, I find that it's one of those concepts that you don't so much "understand" as "get used to". And the best way to get used to something is to use it, which - luckily for us - we'll have plenty of opportunity to do. 
 
 The datatype representing Coyoneda is simple, it is a pair of a value inside of a functor, and a function that will map this value. Essentially, it is nothing more than a suspended map operation: 
 ```idris
