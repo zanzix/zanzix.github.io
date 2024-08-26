@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Some personal notes turned into a blog</title>
     <link href="https://zanzix.github.io/atom.xml" rel="self" type="application/rss+xml" />
-  <updated>2024-08-26T13:11:25Z</updated>
+  <updated>2024-08-26T13:14:15Z</updated>
   <author>
       <name>Zanzi</name>
   </author>
@@ -220,7 +220,8 @@ class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb12-1"><a
 <span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>             <span class="ot">-&gt;</span> <span class="dt">Term</span> hom xs x <span class="ot">-&gt;</span> <span class="dt">Term</span> hom ys y <span class="ot">-&gt;</span> <span class="dt">Term</span> hom prf<span class="op">.</span><span class="fu">fst</span> (<span class="dt">Tensor</span> x y)</span>
 <span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">TensorElim</span> <span class="op">:</span> {xs, ys <span class="op">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} </span>
 <span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>            <span class="ot">-&gt;</span> {default (<span class="fu">concat</span> xs ys) prf <span class="op">:</span> (zs <span class="op">:</span> <span class="dt">List</span> <span class="dt">Ty</span> <span class="op">**</span> <span class="dt">Simplex</span> xs ys zs)} </span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>             <span class="ot">-&gt;</span> <span class="dt">Term</span> hom xs (<span class="dt">Tensor</span> x y) <span class="ot">-&gt;</span> <span class="dt">Term</span> hom (<span class="ot">x :: y ::</span> ys) z <span class="ot">-&gt;</span> <span class="dt">Term</span> hom prf<span class="op">.</span><span class="fu">fst</span> z</span></code></pre></div>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>            <span class="ot">-&gt;</span> <span class="dt">Term</span> hom xs (<span class="dt">Tensor</span> x y) <span class="ot">-&gt;</span> <span class="dt">Term</span> hom (<span class="ot">x :: y ::</span> ys) z </span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>            <span class="ot">-&gt;</span> <span class="dt">Term</span> hom prf<span class="op">.</span><span class="fu">fst</span> z</span></code></pre></div>
 <p>First, let's recover planar terms. To do this, we want to define a
 <code>Structure</code> where <code>hom xs ys</code> is a proof that
 <code>xs = ys</code>:</p>

@@ -185,7 +185,8 @@ data Term : Structure Ty -> List Ty -> Ty -> Type where
              -> Term hom xs x -> Term hom ys y -> Term hom prf.fst (Tensor x y)
   TensorElim : {xs, ys : List Ty} 
             -> {default (concat xs ys) prf : (zs : List Ty ** Simplex xs ys zs)} 
-             -> Term hom xs (Tensor x y) -> Term hom (x :: y :: ys) z -> Term hom prf.fst z
+            -> Term hom xs (Tensor x y) -> Term hom (x :: y :: ys) z 
+            -> Term hom prf.fst z
 ```
 
 First, let's recover planar terms. To do this, we want to define a `Structure` where `hom xs ys` is a proof that `xs = ys`:
