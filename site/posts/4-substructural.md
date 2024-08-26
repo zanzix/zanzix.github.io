@@ -1,15 +1,17 @@
 ---
-layout: post
 title: "Well-Typed Substructural Languages"
 author: Jules Hedges
-date: 2024-08-26
+date: Aug 26, 2024
+tags: []  
+description: Implementing well-typed by construction substructural languages
 ---
+
 
 Guest post by [Jules Hedges](https://julesh.com/)
 
-In this post I'll explain how to build well-typed-by-construction implementations of substructural languages, that is, languages in which our ability to delete, copy and/or swap variables in scope is restricted. I will begin by recounting the folklore that I learned from Conor Mc Bride and Zanzi, and then I will explain a useful trick that I invented: terms that are parametrised by an action of a category of context morphisms.
+In this post I'll explain how to build well-typed by construction implementations of substructural languages, that is, languages in which our ability to delete, copy and/or swap variables in scope is restricted. I will begin by recounting the folklore that I learned from Conor Mc Bride and Zanzi, and then I will explain a useful trick that I invented: terms that are parametrised by an action of a category of context morphisms.
 
-Personally, my main interest in this topic comes from my plans to implement a bidirectional programming language in which all programs are [lenses](https://ncatlab.org/nlab/show/lens+%28in+computer+science%29), so they can be run in both a forwards mode and a backwards mode. Due to the subtle categorical structure of lenses, such a programming language is substructural in a very unique and complicated way. I have found in practice that actions of context morphisms help a lot to make this problem tractable. I'll be continuing to document my development of this language on the [CyberCat Institute blog](https://cybercat.institute/).
+Personally, my main interest in this topic comes from my plans to implement a bidirectional programming language in which all programs are [optics](https://arxiv.org/abs/1703.10857), so they can be run in both a forwards mode and a backwards mode. Due to the subtle categorical structure of optics, such a programming language is substructural in a very unique and complicated way. I have found in practice that actions of context morphisms help a lot to make this problem tractable. I'll be continuing to document my development of this language on the [CyberCat Institute blog](https://cybercat.institute/).
 
 We begin with a tiny language for types, with monoidal products (a neutral name because later we will be making it behave like different kinds of product), a unit type to be the neutral element of the monoidal product, and a "ground" type that is intended to contain some nontrivial values.
 ```haskell
@@ -78,7 +80,7 @@ data Term : List Ty -> Ty -> Type where
   Var : Term [x] x
   -- Unit is a term only in the empty scope
   UnitIntro : Term [] Unit
-  -- Pattern matching on Unit consmes its scope
+  -- Pattern matching on Unit consumes its scope
   UnitElim : Term xs Unit -> Term ys y -> Term (xs ++ ys) y
   -- Constructing a pair consumes the scopes of both sides
   TensorIntro : Term xs x -> Term ys y -> Term (xs ++ ys) (Tensor x y)
@@ -259,7 +261,7 @@ spawn : {a : Ty} -> Term (Co Cartesian) [] a
 spawn = Act Delete Var
 
 -- merge : Either a a -> a
--- merge = \case {Left x -> x; Right x -> x}
+-- merge = \case {Left x => x; Right x => x}
 merge : {a : Ty} -> Term (Co Cartesian) [a, a] a
 merge = Act (Copy Here (Copy Here Delete)) Var
 
