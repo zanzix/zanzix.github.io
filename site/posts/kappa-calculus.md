@@ -1,0 +1,2 @@
+In the lambda calculus, we conflate two uses of multimorphisms - one is for the global variables in scope, and the other for inputs to a function.
+The kappa calculus teases out these two into separate contexts. We now have a context for variables, and a context for multimorphisms.
