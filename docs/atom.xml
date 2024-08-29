@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Some personal notes turned into a blog</title>
     <link href="https://zanzix.github.io/atom.xml" rel="self" type="application/rss+xml" />
-  <updated>2024-08-26T13:14:15Z</updated>
+  <updated>2024-08-29T16:59:54Z</updated>
   <author>
       <name>Zanzi</name>
   </author>
@@ -56,7 +56,7 @@ class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a 
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Pattern matching on Unit, redunant here but kept for comparison to later</span></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">UnitElim</span> <span class="op">:</span> <span class="dt">Term</span> xs <span class="dt">Unit</span> <span class="ot">-&gt;</span> <span class="dt">Term</span> xs x <span class="ot">-&gt;</span> <span class="dt">Term</span> xs x</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- A pair is a term if each side is a term</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">TensorIntro</span> <span class="op">:</span> <span class="dt">Term</span> xs tx <span class="ot">-&gt;</span> <span class="dt">Term</span> xs y <span class="ot">-&gt;</span> <span class="dt">Term</span> xs (<span class="dt">Tensor</span> x y)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">TensorIntro</span> <span class="op">:</span> <span class="dt">Term</span> xs x <span class="ot">-&gt;</span> <span class="dt">Term</span> xs y <span class="ot">-&gt;</span> <span class="dt">Term</span> xs (<span class="dt">Tensor</span> x y)</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Pattern matching on a pair, adding both sides to the scope</span></span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">TensorElim</span> <span class="op">:</span> <span class="dt">Term</span> xs (<span class="dt">Tensor</span> x y) <span class="ot">-&gt;</span> <span class="dt">Term</span> (<span class="ot">x :: y ::</span> xs) z <span class="ot">-&gt;</span> <span class="dt">Term</span> xs z</span></code></pre></div>
 <p>The constructor for <code>Var</code> uses <code>Elem</code>, a
