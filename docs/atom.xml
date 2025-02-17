@@ -2,17 +2,66 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Some personal notes turned into a blog</title>
     <link href="https://zanzix.github.io/atom.xml" rel="self" type="application/rss+xml" />
-  <updated>2025-02-16T19:56:33Z</updated>
+  <updated>2025-02-17T21:02:07Z</updated>
   <author>
       <name>Zanzi</name>
   </author>
   <id>https://zanzix.github.io/</id>
 
   <entry>
+      <title>Compiler Engineering for Substructural Languages I: Day Convolution for
+Covers</title>
+      <link href="https://zanzix.github.io/posts/6-promonoidal-covers.html"/>
+      <id>https://zanzix.github.io/posts/6-promonoidal-covers.html</id>
+      <updated>2025-02-17T00:00:00Z</updated>
+      <summary>Lets define some combinators</summary>
+      <content type="html"><![CDATA[<p>In the <a href="">previous post</a> we've posed the problem of
+defining substructural polymorphism, but while we've defined
+substitution for a polymorphic language, we did not do so for the
+substructural one. We will rectify this in the current blogpost, as well
+as introduce some nice combinators for working with covers.</p>
+<h3 id="substitution-in-the-linear-lambda-calculus">Substitution in the
+Linear Lambda Calculus</h3>
+<p>First let's define substitution in the linear lambda calculus the way
+we'd do normally, then try to introduce some more general machinery.</p>
+<p>Just as in the last post, we'll start by defining relevant covers,
+well-scoped lambda terms, and substitutions</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Cover</span> <span class="ot">:</span> (k, l, m <span class="ot">:</span> <span class="dt">List</span> a) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Done</span>   <span class="ot">:</span>                <span class="dt">Cover</span>      []      []      []</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Left</span>   <span class="ot">:</span> <span class="dt">Cover</span> k l m <span class="ot">-&gt;</span> <span class="dt">Cover</span> (a <span class="ot">::</span> k)     l  (a <span class="ot">::</span> m)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Right</span>  <span class="ot">:</span> <span class="dt">Cover</span> k l m <span class="ot">-&gt;</span> <span class="dt">Cover</span>       k  (a<span class="ot">::</span>l) (a <span class="ot">::</span> m)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Both</span>   <span class="ot">:</span> <span class="dt">Cover</span> k l m <span class="ot">-&gt;</span> <span class="dt">Cover</span> (a <span class="ot">::</span> k) (a<span class="ot">::</span>l) (a <span class="ot">::</span> m)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">--  Binary operators like &#39;App&#39; have a Cover wrapped around them</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Term</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Var</span> <span class="ot">:</span> {s <span class="ot">:</span> <span class="dt">String</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> [s]</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Lam</span> <span class="ot">:</span> {s <span class="ot">:</span> <span class="dt">String</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> (s<span class="ot">::</span>g) <span class="ot">-&gt;</span> <span class="dt">Term</span> g</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">App</span>  <span class="ot">:</span> <span class="dt">Cover</span> g1 g2 g <span class="ot">-&gt;</span> <span class="dt">Term</span> g1 <span class="ot">-&gt;</span> <span class="dt">Term</span> g2 <span class="ot">-&gt;</span> <span class="dt">Term</span> g</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Sub</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">List</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Nil</span> <span class="ot">:</span> <span class="dt">Sub</span> [] []</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^the empty substitution</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Cons</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">String</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> g1 <span class="ot">-&gt;</span> <span class="dt">Cover</span> g1 g2 g <span class="ot">-&gt;</span> <span class="dt">Sub</span> g2 d <span class="ot">-&gt;</span> <span class="dt">Sub</span> g (a<span class="ot">::</span>d)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- add a term in context g1 to a substitution with context g2,</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- and append their contexts</span></span></code></pre></div>
+<p>But now, let's actually see what the guts of substitution look
+like.</p>
+<p>TODO: Substitution in plan</p>
+<h3 id="substitution-using-day-convolution">Substitution using Day
+Convolution</h3>
+<p>TODO: cleaned up substitution</p>
+<h3 id="factor-out-covers">Factor out covers</h3>
+<p>Now, what happens if we factor out the cover outside of Sub? This
+means that, what if instead of combining each individual context using
+Sub, we collect them into a list of contexts, and only have one outer
+cover?</p>]]></content>
+  </entry>
+  <entry>
       <title>Compiler Engineering for Substructural Languages I: The Problem with
 Polymorphism</title>
-      <link href="https://zanzix.github.ioposts/5-substructural-polymorphism.html"/>
-      <id>https://zanzix.github.ioposts/5-substructural-polymorphism.html</id>
+      <link href="https://zanzix.github.io/posts/5-substructural-polymorphism.html"/>
+      <id>https://zanzix.github.io/posts/5-substructural-polymorphism.html</id>
       <updated>2025-02-14T00:00:00Z</updated>
       <summary>Can a correct-by-construction implementation of a substructural language
 be extended to a polymorphic lambda calculus?</summary>
@@ -447,8 +496,8 @@ Videla's library for dependent compiler pipelines</a>.</p>]]></content>
   </entry>
   <entry>
       <title>Well-Typed Substructural Languages</title>
-      <link href="https://zanzix.github.ioposts/4-substructural.html"/>
-      <id>https://zanzix.github.ioposts/4-substructural.html</id>
+      <link href="https://zanzix.github.io/posts/4-substructural.html"/>
+      <id>https://zanzix.github.io/posts/4-substructural.html</id>
       <updated>2024-08-26T00:00:00Z</updated>
       <summary>Implementing well-typed by construction substructural languages</summary>
       <content type="html"><![CDATA[<p>Guest post by <a href="https://julesh.com/">Jules Hedges</a></p>
@@ -758,8 +807,8 @@ building a programming language for optics.</p>]]></content>
   </entry>
   <entry>
       <title>Introduction to Recursion Schemes with Idris</title>
-      <link href="https://zanzix.github.ioposts/3-rec-idris.html"/>
-      <id>https://zanzix.github.ioposts/3-rec-idris.html</id>
+      <link href="https://zanzix.github.io/posts/3-rec-idris.html"/>
+      <id>https://zanzix.github.io/posts/3-rec-idris.html</id>
       <updated>2024-04-04T00:00:00Z</updated>
       <summary>Refactoring Algebraic Datatypes with Recursion Schemes</summary>
       <content type="html"><![CDATA[<h2 id="fixpoints-over-functors">Fixpoints over Functors</h2>
@@ -1053,8 +1102,8 @@ besides those representable as functors on sets.</p>
   </entry>
   <entry>
       <title>From Lambda Calculus to Bicartesian Closed Categories</title>
-      <link href="https://zanzix.github.ioposts/2-stlc-idris.html"/>
-      <id>https://zanzix.github.ioposts/2-stlc-idris.html</id>
+      <link href="https://zanzix.github.io/posts/2-stlc-idris.html"/>
+      <id>https://zanzix.github.io/posts/2-stlc-idris.html</id>
       <updated>2023-09-23T00:00:00Z</updated>
       <summary>Converting the simply typed lambda calculus into typed combinators</summary>
       <content type="html"><![CDATA[<h2 id="introduction">Introduction</h2>
@@ -1588,8 +1637,8 @@ and free monads.</p>]]></content>
   </entry>
   <entry>
       <title>Lambda Calculus and Bicartesian Closed Categories</title>
-      <link href="https://zanzix.github.ioposts/1-bcc.html"/>
-      <id>https://zanzix.github.ioposts/1-bcc.html</id>
+      <link href="https://zanzix.github.io/posts/1-bcc.html"/>
+      <id>https://zanzix.github.io/posts/1-bcc.html</id>
       <updated>2023-08-25T00:00:00Z</updated>
       <summary>Defining a typed combinator syntax, and compile it to an arbitrary
 Bicartesian Closed Category</summary>
