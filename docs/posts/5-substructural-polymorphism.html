@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:fb="http://ogp.me/ns/fb#">
+<head profile="http://www.w3.org/2005/10/profile">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6WEVP6B3NL"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-6WEVP6B3NL');
+    </script>    
+    <meta property="og:image" content="/images/small-bibby.png" />
+    <meta charset="UTF-8">
+    <meta name="description" content="Some personal notes turned into a blog">
+    <meta name="author" content="Zanzi Mihejevs">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tangled_zans">
+<meta name="twitter:creator" content="@tangled_zans">
+<meta name="twitter:title" content="Compiler Engineering for Substructural Languages I: The Problem with
+Polymorphism">
+    <meta name="twitter:description" content="Can a correct-by-construction implementation of a substructural language
+be extended to a polymorphic lambda calculus?">
+        <title>Compiler Engineering for Substructural Languages I: The Problem with
+Polymorphism</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a id="beacon" href="/">
+                <div id="home-text"> HOME </div>
+            </a>
+        </nav>
+    
+        <div class="right-sidebar">
+    
+            <a class="ext-link" href="https://twitter.com/tangled_zans">
+            <img src="/images/twitter-logo.png" alt="Twitter Profile"/>
+        </a>
+        <a class="ext-link" rel="me" href="https://mathstodon.xyz/@zanzi">
+                <img src="/images/mastodon-logo.svg" alt="Mastodon Profile"/>
+              </a>        
+        <div id="theme-button">DAY</div>
+        </div>
+    </header>
+
+<div id="page">
+    <div class="wrapper">
+        <div class="masthead">
+            <span class="title">
+                Compiler Engineering for Substructural Languages I: The Problem with
+Polymorphism
+            </span>
+            <br>
+
+            <br>
+            <span class="byline">by Zanzi Mihejevs</span>
+            <br>
+            <span class="date">Feb 14, 2025</span>
+            <br>
+            <div class="metadata">
+            </div>
+            <div class="tags">
+            </div>
+        </div>
+    </div>
+    <article class="post">
+        <p>We've been working hard at <a
+href="https://glaive-research.org/">Glaive</a> to develop a language
+based on the classical sequent calculus, ie. a type theory with
+first-class support for continuations and call-cc. I will make a proper
+announcement of the language soon, but for now I just want to discuss a
+particularly subtle problem that came up in our development. (In the
+meantime, you can read <a href="https://arxiv.org/abs/2406.14719">this
+excellent paper by Binder et al</a> to get a taste of what programming
+in this class of languages is like).</p>
+<p>For very subtle theoretical reasons, the core language that we're
+developing needs to be substructural. The problem isn't with
+copying/deleting by itself - we can still copy and delete variables -
+this just needs to be done explicitly, at least in the core language.
+Jules wrote about <a
+href="https://zanzix.github.io/posts/4-substructural.html">representing
+explicitly cartesian languages</a> on this blog before.</p>
+<p>So the current intention is that the concrete syntax will be
+cartesian as normal, but it will desugar to a substructural core
+language with explicit copy and delete, aka. the Co-de-Bruijn
+representation. (Though now that we're working on a substructural core,
+we've actually been talking about experimenting with the design space of
+languages like Rust).</p>
+<p>The problem we're facing, however, is that it's entirely unclear how
+to adapt a correct-by-construction implementation of a polymorphic
+language to a substructural discipline.</p>
+<p>So the purpose of this blog series is two-fold:</p>
+<p>On one hand, I would like to document the current progress of our
+language implementation in Idris - this will both be a showcase of using
+dependent types for general compiler engineering, as well as a
+collection of various folklore around implementing substructural
+languages specifically.</p>
+<p>On the other hand, there are still many open questions that we have
+in this space, and there are practically no publications on this topic.
+So we would like to solicit feedback and see if anyone has some ideas
+that we've overlooked.</p>
+<p>In this blog post I will introduce the problem by defining two
+separate lambda calculi - one with substructural variables, and one with
+polymorphism. The question of how to combine the two will be one of the
+main things that we'd like to answer by the time the series
+finishes.</p>
+<h3
+id="substructural-languages-from-a-dependently-typed-point-of-view">Substructural
+Languages from a Dependently-Typed Point of View</h3>
+<p>Let's start with the simply-typed substructural lambda calculus.</p>
+<p>The main thing that happens when switching from a cartesian to a
+linear syntax is that we can no longer implicitly share contexts. This
+means that variables become singletons - only one thing can be in scope
+at the leaves, and that each term has its own context, so rules that
+involve more than one term (such as <code>App</code>) now need to
+explicitly combine them.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Naive representation of linear terms</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Term</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Var</span> <span class="ot">:</span> {s <span class="ot">:</span> <span class="dt">String</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> [s]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Lam</span> <span class="ot">:</span> {s <span class="ot">:</span> <span class="dt">String</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> (s<span class="ot">::</span>g) <span class="ot">-&gt;</span> <span class="dt">Term</span> g</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">App</span>  <span class="ot">:</span> <span class="dt">Term</span> g1 <span class="ot">-&gt;</span> <span class="dt">Term</span> g2 <span class="ot">-&gt;</span> <span class="dt">Term</span> (g1 <span class="fu">++</span> g2)</span></code></pre></div>
+<p>This of course creates the dreaded green slime in the domain of
+<code>App</code> - we now have a function in our data-type definition,
+which will cause problems later.</p>
+<p>Because of this, the standard solution is to use 'covers', which
+represent the function (++) as a proof-relevant relation. This gives us
+a way to pattern-match on the Cover when needed, thus avoiding the
+unifier from getting stuck in such cases.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- A relation for splitting relevant terms.</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">-- Each variable either goes into one of the contexts, or both.</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Cover</span> <span class="ot">:</span> (k, l, m <span class="ot">:</span> <span class="dt">List</span> a) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Done</span>   <span class="ot">:</span>                <span class="dt">Cover</span>      []      []      []</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Left</span>   <span class="ot">:</span> <span class="dt">Cover</span> k l m <span class="ot">-&gt;</span> <span class="dt">Cover</span> (a <span class="ot">::</span> k)     l  (a <span class="ot">::</span> m)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Right</span>  <span class="ot">:</span> <span class="dt">Cover</span> k l m <span class="ot">-&gt;</span> <span class="dt">Cover</span>       k  (a<span class="ot">::</span>l) (a <span class="ot">::</span> m)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Both</span>   <span class="ot">:</span> <span class="dt">Cover</span> k l m <span class="ot">-&gt;</span> <span class="dt">Cover</span> (a <span class="ot">::</span> k) (a<span class="ot">::</span>l) (a <span class="ot">::</span> m)</span></code></pre></div>
+<p>Given a context <code>m</code>, the cover shows how to decompose it
+into the contexts <code>k</code> and <code>l</code>, by putting each
+variable into either one or both of the contexts.</p>
+<p>Our term representation now looks like this.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">--  Binary operators like &#39;App&#39; have a Cover wrapped around them</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Term</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Var</span> <span class="ot">:</span> {s <span class="ot">:</span> <span class="dt">String</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> [s]</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Lam</span> <span class="ot">:</span> {s <span class="ot">:</span> <span class="dt">String</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> (s<span class="ot">::</span>g) <span class="ot">-&gt;</span> <span class="dt">Term</span> g</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">App</span>  <span class="ot">:</span> <span class="dt">Cover</span> g1 g2 g <span class="ot">-&gt;</span> <span class="dt">Term</span> g1 <span class="ot">-&gt;</span> <span class="dt">Term</span> g2 <span class="ot">-&gt;</span> <span class="dt">Term</span> g</span></code></pre></div>
+<p>This won't be a full introduction to Co-de-Bruijn, for more details I
+recommend <a
+href="https://jesper.sikanda.be/posts/1001-syntax-representations.html">this
+blog post by Jesper Cockx</a> (Ctrl+F for 'Co-de-Bruijn'), <a
+href="https://arxiv.org/abs/1807.04085">Conor's original paper</a>, or
+<a
+href="https://studenttheses.uu.nl/bitstream/handle/20.500.12932/44219/thesis-final-matthias-heinzel.pdf?sequence=1&amp;isAllowed=y">this
+great Masters thesis by Matthias Heinzel</a>.</p>
+<p>In this blog post I'd like to focus on one of the reasons for
+<em>why</em> we care about Co-de-Bruijn, which is that it eliminates one
+of the biggest sources of inefficiency when it comes to implemeting
+substitution.</p>
+<p>Regardless of which representation of substitution we use, we will
+inevitably need to perform substitution under binders. Traditionally,
+this is done by introducing the concept of a <em>renaming</em>, or
+<em>thinning</em>. The idea is that as we substitute under binders we
+additionally perform a renaming of a term, extending its context with a
+new variable. <a
+href="https://gist.github.com/AndrasKovacs/bd6a6333e4eecd7acb0eb9d98f7e0cb8">András
+Kovacs has a great reference implementation here</a>.</p>
+<p>Semantically, this is nice - renaming forms a functor, substitution
+forms a (relative) monad on that functor. (We will look at this semantic
+perspective in more detail in a future series, but for now we'll just
+focus on the syntax).</p>
+<p>Operationally, this is a nightmare - we now need to traverse each
+term twice, and moreover, the renaming doesn't <em>do</em> anything
+beyond keeping the contexts of sub-terms in sync with each other.
+Context sharing was meant to be a simplification, but now it induces a
+major operational cost on our implementation.</p>
+<p>The beautiful thing about substructural languages is that they forego
+the need for renaming - because contexts are split, there's no need to
+keep them in sync. And because the variables are now singletons, there
+is no need to traverse the entire term just to update its context about
+all the variables it won't be using anyway.</p>
+<p>In practice, our substitution datatype would look like this.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- A substitution for a substructural language</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Sub</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">List</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Nil</span> <span class="ot">:</span> <span class="dt">Sub</span> [] []</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^the empty substitution</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Cons</span> <span class="ot">:</span> {a <span class="ot">:</span> <span class="dt">String</span>} <span class="ot">-&gt;</span> <span class="dt">Term</span> g1 <span class="ot">-&gt;</span> <span class="dt">Cover</span> g1 g2 g <span class="ot">-&gt;</span> <span class="dt">Sub</span> g2 d <span class="ot">-&gt;</span> <span class="dt">Sub</span> g (a<span class="ot">::</span>d)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- add a term in context g1 to a substitution with context g2,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- and append their contexts</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">-- Substitution traverses the term and applies the environment to each subterm</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">subst</span> <span class="ot">:</span> <span class="dt">Term</span> g <span class="ot">-&gt;</span> <span class="dt">Sub</span> d g <span class="ot">-&gt;</span> <span class="dt">Term</span> d</span></code></pre></div>
+<p>(Compare it to <a
+href="https://gist.github.com/AndrasKovacs/bd6a6333e4eecd7acb0eb9d98f7e0cb8#file-stlcsubst-agda-L162">this
+definition in Kovac's implementation which uses implcit
+context-sharing</a>). The only difference is that whenever we Cons a new
+term on the environment, we need to explicitly add its context using a
+cover.</p>
+<p>This works well, modulo some wrangling of covers, for which we've
+come up with some helpful combinators with the help of Vikraman
+Choudhury, and that I'll show in the next blog post.</p>
+<p>For now, the main point is that the most expensive operation -
+extending the context by a new variable - is now entirely free, <a
+href="https://gist.github.com/AndrasKovacs/bd6a6333e4eecd7acb0eb9d98f7e0cb8#file-stlcsubst-agda-L179">rather
+than requiring us to individually weaken each term in the
+environment</a>.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ext</span> <span class="ot">:</span> {g&#39; <span class="ot">:</span> <span class="dt">List</span> <span class="dt">Ty</span>} <span class="ot">-&gt;</span> <span class="dt">Sub</span> g g&#39; <span class="ot">-&gt;</span> <span class="dt">Sub</span> (s <span class="ot">::</span> g) (s <span class="ot">::</span> g&#39;)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>ext lift e <span class="fu">=</span> <span class="dt">Cons</span> <span class="dt">Var</span> (<span class="dt">Left</span> coverRightId) e</span></code></pre></div>
+<p>All we do is Cons a variable to an existing environment
+<code>e</code>, and our cover is a proof that the new variable goes on
+the left-most context, while all the other variables go on the right
+(this is what <code>coverRightId</code> does). None of the actual terms
+in <code>e</code> are touched at any point.</p>
+<p>Now, unfortunately... I don't think this substitution datatype
+generalises to the polymorphic case, at least not in an obvious way.</p>
+<p>To see that, let's first sketch out what a polymorphic language with
+shared contexts looks like.</p>
+<h3 id="a-quick-introduction-to-polymorphic-lambda-calculi">A Quick
+Introduction to Polymorphic Lambda Calculi</h3>
+<p>András Kovacs has us covered once again, as he has a <a
+href="https://github.com/AndrasKovacs/system-f-omega/blob/master/Term.agda">great
+reference implementation</a>.</p>
+<p>Unlike András, we will be going with a well scoped rather than well
+typed representation, in order to avoid the buckets of green slime that
+a typical intrinsically typed implementation of System F will saddle us
+with.</p>
+<p>First we will define types, which are now indexed by a list of type
+variables.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Ty</span> <span class="ot">:</span> (typeVars <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">VarT</span> <span class="ot">:</span> <span class="dt">Elem</span> a g <span class="ot">-&gt;</span> <span class="dt">Ty</span> g</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^ Type variables</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Forall</span> <span class="ot">:</span> <span class="dt">Ty</span> (s<span class="ot">::</span>g) <span class="ot">-&gt;</span> <span class="dt">Ty</span> g</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^ Type quantification</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Mu</span> <span class="ot">:</span> <span class="dt">Ty</span> (s<span class="ot">::</span>g) <span class="ot">-&gt;</span> <span class="dt">Ty</span> g</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^ Least fixpoint of a datatype</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">(~&gt;)</span> <span class="ot">:</span> <span class="dt">Ty</span> g <span class="ot">-&gt;</span> <span class="dt">Ty</span> g <span class="ot">-&gt;</span> <span class="dt">Ty</span> g</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^ Function type</span></span></code></pre></div>
+<p>For terms contexts, the simplest approach is to define them as being
+indexed by two independent lists, one for type variables and one for
+term variables, as is <a
+href="https://github.com/sstucki/system-f-agda/blob/master/src/SystemF/Term.agda">done
+by Sandro Stucki here</a>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Term</span> <span class="ot">:</span> (typeVars <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span>) <span class="ot">-&gt;</span> (termVars <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span>) <span class="ot">-&gt;</span> <span class="dt">Type</span></span></code></pre></div>
+<p>This representation is convenient to work with, but misses an
+important connection between the two contexts - term variables can refer
+to type variables in their types! So a more informative representation
+would allow the term context to be synced with the type context, and the
+standard solution to this is to index the latter by the former.</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- a list indexed by another list</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">IxList</span> <span class="ot">:</span> (a <span class="ot">:</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> <span class="dt">List</span> a <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Nil</span> <span class="ot">:</span> <span class="dt">IxList</span> a []</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^the empty IxList is indexed by the empty List</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">(::)</span> <span class="ot">:</span> a <span class="ot">-&gt;</span> <span class="dt">IxList</span> a ls <span class="ot">-&gt;</span> <span class="dt">IxList</span> a ls</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^add a new term variable without touching the index</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">(:::)</span> <span class="ot">:</span> (el <span class="ot">:</span> a) <span class="ot">-&gt;</span> <span class="dt">IxList</span> a as <span class="ot">-&gt;</span> <span class="dt">IxList</span> a (el<span class="ot">::</span>as)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^add a new type variable,</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- increasing the type context by which future term variables will be indexed</span></span></code></pre></div>
+<p>We now need a version of the <a
+href="https://www.idris-lang.org/docs/idris2/0.6.0/base_docs/docs/Data.List.Elem.html"><code>Elem</code>
+data-type</a> for indexed list, ie. a proof-relevant variable that keeps
+track of its position in the context.</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">IxElem</span> <span class="ot">:</span> a <span class="ot">-&gt;</span> <span class="dt">IxList</span> a ks <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Here</span>    <span class="ot">:</span> <span class="dt">IxElem</span> a (a <span class="ot">::</span> as)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">There</span>   <span class="ot">:</span> <span class="dt">IxElem</span> a as <span class="ot">-&gt;</span> <span class="dt">IxElem</span> a (b <span class="ot">::</span> as)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ThereK</span>  <span class="ot">:</span> <span class="dt">IxElem</span> a as <span class="ot">-&gt;</span> <span class="dt">IxElem</span> a (b <span class="ot">:::</span> as)</span></code></pre></div>
+<p>We've now got everything to define a well scoped fragment of System
+F.</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Term</span> <span class="ot">:</span> (tyVars <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>         <span class="ot">-&gt;</span> (trmVars <span class="ot">:</span> <span class="dt">IxList</span> <span class="dt">String</span> tyVars) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Var</span>  <span class="ot">:</span> (var <span class="ot">:</span> <span class="dt">String</span>) <span class="ot">-&gt;</span> <span class="dt">IxElem</span> {tyVars} var termVars <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars termVars</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Proof that the variable var is in the IxList termvars</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Lam</span>  <span class="ot">:</span> (a <span class="ot">:</span> <span class="dt">String</span>) <span class="ot">-&gt;</span> (tya <span class="ot">:</span> <span class="dt">Ty</span> tyVars)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>      <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars (a <span class="ot">::</span> trmVars) <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars trmVars</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Lambda abstraction is standard, and includes a type annotation `ty`</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">App</span> <span class="ot">:</span> <span class="dt">Term</span> tyVars trmVars <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars trmVars</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>     <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars trmVars</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- lambda application is standard</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">In</span>   <span class="ot">:</span> (f <span class="ot">:</span> <span class="dt">Ty</span> (tyVar <span class="ot">::</span> tyVars)) <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars trmVars <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars trmVars</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- inject into a term of a recursive type `f`</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Out</span>  <span class="ot">:</span> (f <span class="ot">:</span> <span class="dt">Ty</span> (tyVar <span class="ot">::</span> tyVars)) <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars trmVars <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars trmVars</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- project from a term of a recursive type `f`</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  <span class="dt">TLam</span> <span class="ot">:</span> (tyVar <span class="ot">:</span> <span class="dt">String</span>) <span class="ot">-&gt;</span> <span class="dt">Term</span> (tyVar <span class="ot">::</span> tyVars) (tyVar <span class="ot">:::</span> trmVars)</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>      <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars trmVars</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- type abstraction now binds a type variable `k` in both contexts</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>  <span class="dt">TApp</span>  <span class="ot">:</span> <span class="dt">Term</span> tyVars trmVars <span class="ot">-&gt;</span> <span class="dt">Ty</span> tyVars <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars trmVars</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Type application applies a type to a term with a type lambda</span></span></code></pre></div>
+<p>For now we will assume some familiarity with System F, so I won't go
+into too much detail into what each constructor does, but we can rectify
+that in a future blog post. I recommend <a
+href="https://homepages.inf.ed.ac.uk/wadler/papers/mpc-2019/system-f-in-agda.pdf">this
+paper by Chapman et al</a> (aptly called "System F in Agda, for Fun and
+Profit") in the meantime.</p>
+<p>At this point, we have enough to start defining renaming and
+substitution, but before that we should take note of something
+interesting: because we designed our term contexts to be indexed by type
+contexts, this decision will propagate across all context operations. So
+term renamings are indexed by type renamings, and term substitutions are
+indexed by type substitutions.</p>
+<p>For our purposes, we only care about substitution, since a
+substructural type system side-steps renaming.</p>
+<p>In order to define term substitutions we first need to define type
+substitutions:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- type substitution with implicitly shared contexts &#39;g&#39;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">TySub</span> <span class="ot">:</span> <span class="dt">List</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">List</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">NilTy</span> <span class="ot">:</span> <span class="dt">TySub</span> g []</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^empty type substitution.</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ConsTy</span> <span class="ot">:</span> (tyVar <span class="ot">:</span> <span class="dt">String</span>) <span class="ot">-&gt;</span> <span class="dt">Ty</span> g <span class="ot">-&gt;</span> <span class="dt">TySub</span> g d <span class="ot">-&gt;</span> <span class="dt">TySub</span> g (tyVar<span class="ot">::</span>d)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- ^extend the type substitution with a new variable</span></span></code></pre></div>
+<p>Contrast this to the earlier implementation of <code>Sub</code> which
+used a cover to concatenate contexts - we are now assuming that the
+context <code>g</code> is the same across all terms. While this
+simplifies the datatype, it comes at the cost of requiring any operation
+on term contexts (such as weakening) to apply to <em>all</em> terms in
+the substitution.</p>
+<p>We can see this once we define substitution, which is no different to
+substitution in any well scoped syntax.</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- projection from the environment</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">indexEnv</span> <span class="ot">:</span> <span class="dt">TySub</span> g d <span class="ot">-&gt;</span> <span class="dt">Elem</span> a d <span class="ot">-&gt;</span> <span class="dt">Ty</span> g</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>indexEnv (<span class="dt">ConsTy</span> a x y) <span class="dt">Here</span> <span class="fu">=</span> x</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>indexEnv (<span class="dt">ConsTy</span> a x y) (<span class="dt">There</span> t) <span class="fu">=</span> indexEnv y t</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- Traverse a type and substitute all the type variables</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="fu">tySubst</span> <span class="ot">:</span> <span class="dt">TySub</span> g d <span class="ot">-&gt;</span> <span class="dt">Ty</span> d <span class="ot">-&gt;</span> <span class="dt">Ty</span> g</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>tySubst sub (<span class="dt">VarT</span> x) <span class="fu">=</span> indexEnv sub x</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>tySubst sub (<span class="dt">Forall</span> s x) <span class="fu">=</span> <span class="dt">Forall</span> s <span class="fu">$</span> tySubst (tyExt sub) x</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>tySubst sub (<span class="dt">Mu</span> s x) <span class="fu">=</span> <span class="dt">Mu</span> s <span class="fu">$</span> tySubst (tyExt sub) x</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>tySubst sub (<span class="dt">Imp</span> x y) <span class="fu">=</span> <span class="dt">Imp</span> (tySubst sub x) (tySubst sub y)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="co">-- extending the type environment</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="fu">extTy</span> <span class="ot">:</span> <span class="dt">TySub</span> g d <span class="ot">-&gt;</span> <span class="dt">TySub</span> (s <span class="ot">::</span> g) (s <span class="ot">::</span> d)</span></code></pre></div>
+<p>Just as before, we rely on the extension operation <code>tyExt</code>
+when dealing with binders such as Forall or Mu. This operation weakens
+the context of each value in the substitution, thus requiring a full
+traversal of each value. Unlike with the substructural case, where we
+get this operation for free, defining it here requires us to also define
+renaming, and so we'll elide this definition for now (but it can be
+found in any of the reference implementations above).</p>
+<p>What we're really interested in is term substitutions, so lets see
+what our new datatype looks like.</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">TrmSub</span> <span class="ot">:</span> (g <span class="ot">:</span> <span class="dt">IxList</span> <span class="dt">String</span> as) <span class="ot">-&gt;</span> (sub <span class="ot">:</span> <span class="dt">TySub</span> as bs)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>           <span class="ot">-&gt;</span> (d <span class="ot">:</span> <span class="dt">IxList</span> <span class="dt">String</span> bs) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">NilTrm</span> <span class="ot">:</span> <span class="dt">TrmSub</span> g <span class="dt">NilTy</span> []</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- an empty term substitution indexed by an empty type substitution</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ConsTrm</span> <span class="ot">:</span> (trmVar <span class="ot">:</span> <span class="dt">String</span>) <span class="ot">-&gt;</span> <span class="dt">Term</span> tyVars g</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>         <span class="ot">-&gt;</span> <span class="dt">TrmSub</span> g sub d <span class="ot">-&gt;</span> <span class="dt">TrmSub</span> g sub (trmVar<span class="ot">::</span>d)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- extend the term variable context by `trmVar` without affecting the type variables</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ConsTrmTy</span> <span class="ot">:</span> (tyVar <span class="ot">:</span> <span class="dt">String</span>) <span class="ot">-&gt;</span> (ty <span class="ot">:</span> <span class="dt">Ty</span> tyVars)</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>         <span class="ot">-&gt;</span> <span class="dt">TrmSub</span> g sub d <span class="ot">-&gt;</span> <span class="dt">TrmSub</span> g (<span class="dt">ConsTy</span> tyVar ty sub) (tyVar <span class="ot">:::</span> d)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- extend both the term and type variable contexts by a type variable `tyVar`</span></span></code></pre></div>
+<p>This is... a lot, so let's break it down into components.</p>
+<p>The first thing we notice is that the type of TrmSub is indexed by an
+instance of TySub - ie. in order to map a term context <code>g</code>,
+which is indexed by a type context <code>as</code>, into <code>d</code>,
+which is indexed by <code>bs</code>, we need to explain how to map
+<code>as</code> to <code>bs</code>. (Jules tells me that this means that
+we're probably dealing with a fibration).</p>
+<p>The rules for NilTrm and ConsTrm are just as before, except that
+NilTrm is indexed by the empty type substitution, and ConsTrm is indexed
+by an arbitrary type substitution <code>sub</code>, which it does not
+interact with.</p>
+<p>The interesting case is <code>ConsTrmTy</code> - it extends the term
+substitution by a <em>type</em> variable - which in turn means that it
+needs to extend the indexing type substitution <code>sub</code> with the
+same variable.</p>
+<p>We can now define the action of substitution on terms, and just like
+with term contexts and term substitutions it will be indexed by a
+corresponding action of type substitutions on types. Unlike before, I'll
+work through the full definition here:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Lookup a term in an environment</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">lookupTrm</span> <span class="ot">:</span> <span class="dt">TrmSub</span> d tySub g <span class="ot">-&gt;</span> <span class="dt">IxElem</span> as g <span class="ot">-&gt;</span> <span class="dt">Term</span> bs d</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>lookupTrm (<span class="dt">ConsTrm</span> a x y) <span class="dt">Here</span> <span class="fu">=</span> x</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>lookupTrm (<span class="dt">ConsTrm</span> b y z) (<span class="dt">There</span> x) <span class="fu">=</span> indexTrmEnv z x</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>lookupTrm (<span class="dt">ConsTrmTy</span> b y z) (<span class="dt">ThereK</span> x) <span class="fu">=</span> indexTrmEnv z x</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- Substitute a term</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="fu">trmSubst</span> <span class="ot">:</span> (tySub <span class="ot">:</span> <span class="dt">TySub</span> as bs) <span class="ot">-&gt;</span> (trmSub <span class="ot">:</span> <span class="dt">TrmSub</span> g tySub d)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>        <span class="ot">-&gt;</span> <span class="dt">Term</span> bs d <span class="ot">-&gt;</span> <span class="dt">Term</span> as g</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>trmSubst tySub trmSub (<span class="dt">Var</span> a x)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">=</span> lookupTerm trmSub x</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>trmSubst tySub trmSub (<span class="dt">Lam</span> a tya x)</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">=</span> <span class="dt">Lam</span> a (tySubst tySub tya) (trmSubst tySub (extTrm trmSub) x)</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>trmSubst tySub trmSub (<span class="dt">App</span> x y)</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">=</span> <span class="dt">App</span> (trmSubst tySub trmSub x) (trmSubst tySub trmSub y)</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>trmSubst tySub trmSub (<span class="dt">In</span> ty trm)</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">=</span> <span class="dt">In</span> (tySubst (extTy tySub) ty) (trmSubst tySub trmSub trm)</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>trmSubst tySub trmSub (<span class="dt">Out</span> ty trm)</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">=</span> <span class="dt">Out</span> (tySubst (extTy tySub) ty) (trmSubst tySub trmSub trm)</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>trmSubst tySub trmSub (<span class="dt">TLam</span> k trm)</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">=</span> <span class="dt">TLam</span> k <span class="fu">$</span> trmSubst (extTy tySub) (extTrmTy trmSub) trm</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>trmSubst tySub trmSub (<span class="dt">TApp</span> trm ty)</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">=</span> <span class="dt">TApp</span> (trmSubst tySub trmSub trm) (tySubst tySub ty)</span></code></pre></div>
+<p>Let's work through these one by one.</p>
+<p><code>Var</code> is unchanged beyond looking up the value in a more
+complicated environment.</p>
+<p><code>Lam</code> extends the term substitution just as in the simply
+typed case, but now performs an additional type substitution on its type
+annotation.</p>
+<p><code>App</code> is the same as with the STLC.</p>
+<p>Both <code>In</code> and <code>Out</code> involve a binder in the
+datatype that we're taking the fixpoint over, so they require us to
+perform an extension of the type substitution, but they substitute the
+term itself as normal.</p>
+<p><code>TLam</code> is the most interesting case because it binds a
+type variable inside a term. This means that we need to extend the type
+substitution, as well as extend the term substitution by a new
+<em>type</em> variable. This is the reason why <code>TrmSub</code> has
+the shape it does.</p>
+<p><code>TApp</code> is not much more complicated than <code>App</code>,
+except that one of the things it substitutes is a term and the other is
+the type that we're applying to it.</p>
+<p>Of note is the fact that term substitutions now have two extension
+operations:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- extend the term substitution by a new term variable</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">extTrm</span> <span class="ot">:</span> <span class="dt">TrmSub</span> g tySub d <span class="ot">-&gt;</span> <span class="dt">TrmSub</span> (a <span class="ot">::</span> g) tySub (a <span class="ot">::</span> d)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co">-- extend the term substitution by a new *type* variable</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="fu">extTrmTy</span> <span class="ot">:</span> <span class="dt">TrmSub</span> g tySub d <span class="ot">-&gt;</span> <span class="dt">TrmSub</span> (k <span class="ot">:::</span> g) (extTy tySub) (k <span class="ot">:::</span> d)</span></code></pre></div>
+<p><code>extTrm</code> leaves the type substitution alone, but
+<code>extTrmTy</code> extends both the term substitution and the type
+substitution that it's indexed by with the same variable</p>
+<p>And just as before, in order to implement <code>extTrm</code> and
+<code>extTrmTy</code> we would need to implement term renamings which
+are indexed by type renamings. This is standard, and is included in all
+of the earlier references.</p>
+<h3 id="towards-substructural-polymorphism">Towards substructural
+polymorphism</h3>
+<p>At this point we have two generalisations of the simply typed lambda
+calculus - one takes us into substructural types, the other into
+polymorphism. It would be really nice if we could combine the two, and
+define a substructural polymorphic language. Unfortunately though, it's
+<em>extremely</em> not obvious how to do this.</p>
+<p>The usual answer provided in the literature is to keep the type
+contexts cartesian, and only make the term contexts linear. After all,
+what does it even <em>mean</em> for a type context to be linear?</p>
+<p>While this works on paper, this would make the implementation quite
+cumbersome. What makes the implementation above as slick as it is, is
+the fact that the inductive structure of type-indexed-terms closely
+matches the inductive structure of the types indexing them. Letting
+types have implicitly shared contexts while enforcing a linear
+discipline on terms would not work so well (or at all?). And moreover,
+if one of the reasons for working substructurally is to avoid the
+expensive renaming operation, it would be a job-half-done if we
+eliminated term renamings while keeping renamings of types.</p>
+<p>So while it's true that it doesn't quite make sense to talk about
+"linear type contexts", we could still talk about 'explicitly cartesian
+contexts', ie. Co-de-Bruijn-style contexts which allow copying and
+deleting of type variables so long as that's done explicitly, rather
+than implicitly through context-sharing.</p>
+<p>But this still begs the question - what should the right definition
+of a polymorphic substructural lambda calculus even be?</p>
+<p>Defining polymorphic covers would not be such a big deal - working by
+analogy with the other polymorphic operations, we can guess that a cover
+that handles term contexts will be indexed by a cover for type
+contexts.</p>
+<p>But where things break down is when we need to define linear term
+substitutions, ie. this data-type:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode idr"><code class="sourceCode idris"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">LinTrmSub</span> <span class="ot">:</span> (g <span class="ot">:</span> <span class="dt">IxList</span> <span class="dt">String</span> as) <span class="ot">-&gt;</span> (sub <span class="ot">:</span> <span class="dt">LinTySub</span> as bs)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>              <span class="ot">-&gt;</span> (d <span class="ot">:</span> <span class="dt">IxList</span> <span class="dt">String</span> bs) <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span></span></code></pre></div>
+<p>I have attempted this a few times now, but each time I reached a
+dead-end.</p>
+<p>Jules suspects that this is because monoidal fibrations are much less
+obvious to work with than cartesian fibrations, but I have not figured
+out how to translate the extra data needed in the definition of a
+monoidal fibration into code.</p>
+<p>So this is the problem that we're currently facing, and I'd be
+interested if anyone has some ideas here.</p>
+<p>In the meantime, the blog series will explore the things that we
+<em>do</em> know how to do well. In the next few posts I'll show you how
+to work with covers more generally, how to define scope-checkers and
+type-checkers for substructural languages, and how to put all the pieces
+together into a full compiler pipeline using <a
+href="https://cybercat.institute/2025/01/13/program-pipelines.idr/">Andre
+Videla's library for dependent compiler pipelines</a>.</p>
+
+        <br>
+        <br>
+
+        <!--Share buttons-->
+        <div class="social-buttons">
+            <a href="https://twitter.com/share" class="twitter-share-button"
+                                                data-url="https://zanzix.github.io" data-text="Check out: Compiler Engineering for Substructural Languages I: The Problem with
+Polymorphism - " data-via="tangled_zans">Tweet</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <a href="https://twitter.com/tangled_zans" class="twitter-follow-button" data-show-count="false" data-dnt="true">Follow @tangled_zans</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
+        </div>
+</article>
+
+</div>
+
+<footer>
+    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+</footer>
+
+<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<script src="/js/main.js"></script>
+</body>
+</html>
